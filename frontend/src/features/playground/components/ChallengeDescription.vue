@@ -1,0 +1,384 @@
+<template>
+  <div class="ch-desc">
+    <!-- Header -->
+    <div class="ch-header">
+      <div class="ch-header-top">
+        <span class="diff-badge" :class="`diff--${challenge.difficulty}`">
+          {{ diffLabel(challenge.difficulty) }}
+        </span>
+        <span class="ch-pts">{{ challenge.points }} pts base</span>
+        <span v-if="challenge.requires_review" class="ch-review-tag">Revisión manual</span>
+      </div>
+      <h2 class="ch-title">{{ challenge.title }}</h2>
+      <div v-if="challenge.courses?.length" class="ch-courses">
+        <span v-for="c in challenge.courses" :key="c.id" class="ch-course-badge">{{ c.code }}</span>
+      </div>
+    </div>
+
+    <div class="ch-body">
+      <!-- Description -->
+      <div class="ch-section">
+        <span class="ch-section-label">Descripción</span>
+        <pre class="ch-text">{{ challenge.description }}</pre>
+      </div>
+
+      <!-- Example I/O -->
+      <div v-if="challenge.example_input || challenge.example_output" class="ch-examples">
+        <div v-if="challenge.example_input" class="ch-example">
+          <span class="ch-section-label">Ejemplo de entrada</span>
+          <pre class="ch-code-block">{{ challenge.example_input }}</pre>
+        </div>
+        <div v-if="challenge.example_output" class="ch-example">
+          <span class="ch-section-label">Salida esperada</span>
+          <pre class="ch-code-block">{{ challenge.example_output }}</pre>
+        </div>
+      </div>
+
+      <!-- Tags -->
+      <div v-if="challenge.tags?.length" class="ch-tags">
+        <span v-for="tag in challenge.tags" :key="tag" class="ch-tag">{{ tag }}</span>
+      </div>
+
+      <!-- Last attempt result -->
+      <div v-if="lastAttempt" class="ch-attempt-result" :class="attemptClass">
+        <div class="ch-attempt-header">
+          <span class="ch-attempt-icon">{{ attemptIcon }}</span>
+          <span class="ch-attempt-title">{{ attemptTitle }}</span>
+          <span class="ch-attempt-pts" v-if="lastAttempt.points_earned">
+            +{{ lastAttempt.points_earned }} pts
+          </span>
+        </div>
+
+        <!-- Test case results -->
+        <div v-if="lastAttempt.results?.length" class="ch-tc-results">
+          <div
+            v-for="(r, i) in lastAttempt.results" :key="i"
+            class="ch-tc-item"
+            :class="r.passed ? 'ch-tc--pass' : 'ch-tc--fail'"
+          >
+            <div class="ch-tc-row">
+              <span class="ch-tc-icon">{{ r.passed ? '✓' : '✗' }}</span>
+              <span class="ch-tc-label">Test {{ i + 1 }}</span>
+            </div>
+            <div v-if="r.actual_output" class="ch-tc-output">
+              <span class="ch-tc-output-label">Tu output</span>
+              <pre class="ch-tc-pre">{{ r.actual_output }}</pre>
+            </div>
+            <div v-if="r.error" class="ch-tc-output">
+              <span class="ch-tc-output-label ch-tc-output-label--err">Error</span>
+              <pre class="ch-tc-pre ch-tc-pre--err">{{ r.error }}</pre>
+            </div>
+          </div>
+        </div>
+
+        <p v-if="lastAttempt.review_feedback" class="ch-feedback">
+          {{ lastAttempt.review_feedback }}
+        </p>
+
+        <div v-if="lastAttempt.review_status === 'pending'" class="ch-pending-note">
+          Tu solución está esperando revisión del docente.
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import type { Challenge, Attempt } from '@/types/challenges'
+
+const props = defineProps<{
+  challenge: Challenge
+  lastAttempt: Attempt | null
+}>()
+
+function diffLabel(d: string) {
+  return d === 'easy' ? 'Fácil' : d === 'medium' ? 'Media' : 'Difícil'
+}
+
+const attemptClass = computed(() => {
+  const a = props.lastAttempt
+  if (!a) return ''
+  if (a.passed) return 'ch-attempt--passed'
+  if (a.review_status === 'pending') return 'ch-attempt--pending'
+  if (a.review_status === 'rejected') return 'ch-attempt--rejected'
+  return 'ch-attempt--failed'
+})
+
+const attemptIcon = computed(() => {
+  const a = props.lastAttempt
+  if (!a) return ''
+  if (a.passed) return '✓'
+  if (a.review_status === 'pending') return '⏳'
+  if (a.review_status === 'rejected') return '✗'
+  return '✗'
+})
+
+const attemptTitle = computed(() => {
+  const a = props.lastAttempt
+  if (!a) return ''
+  if (a.passed) return 'Correcto'
+  if (a.review_status === 'pending') return 'Enviado — pendiente de revisión'
+  if (a.review_status === 'rejected') return 'Rechazado'
+  return `Fallido — intento #${a.attempt_number}`
+})
+</script>
+
+<style scoped>
+.ch-desc {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: #1e1e2e;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ch-header {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #313244;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ch-header-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.diff-badge {
+  font-size: 0.65rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 700;
+}
+.diff--easy   { background: #1e3a1e; color: #a6e3a1; }
+.diff--medium { background: #3a2a1e; color: #fab387; }
+.diff--hard   { background: #3a1e1e; color: #f38ba8; }
+
+.ch-pts {
+  font-size: 0.7rem;
+  color: #f9e2af;
+  font-weight: 600;
+}
+
+.ch-review-tag {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: #89b4fa20;
+  color: #89b4fa;
+  font-weight: 600;
+}
+
+.ch-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #cdd6f4;
+}
+
+.ch-courses {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.ch-course-badge {
+  font-size: 0.62rem;
+  padding: 0.08rem 0.4rem;
+  border-radius: 3px;
+  background: #313244;
+  color: #cba6f7;
+  font-weight: 700;
+}
+
+.ch-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ch-body::-webkit-scrollbar { width: 4px; }
+.ch-body::-webkit-scrollbar-track { background: transparent; }
+.ch-body::-webkit-scrollbar-thumb { background: #313244; border-radius: 2px; }
+
+.ch-section { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.ch-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #45475a;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.ch-text {
+  font-size: 0.8rem;
+  color: #a6adc8;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ch-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ch-example { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.ch-code-block {
+  background: #11111b;
+  border: 1px solid #313244;
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.78rem;
+  color: #cdd6f4;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ch-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ch-tag {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  background: #313244;
+  color: #6c7086;
+}
+
+/* ── Attempt result ───────────────────────────────────────── */
+.ch-attempt-result {
+  border-radius: 8px;
+  border: 1px solid #313244;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ch-attempt--passed  { border-color: #a6e3a140; background: #a6e3a108; }
+.ch-attempt--pending { border-color: #fab38740; background: #fab38708; }
+.ch-attempt--rejected { border-color: #f38ba840; background: #f38ba808; }
+.ch-attempt--failed  { border-color: #f38ba840; background: #f38ba808; }
+
+.ch-attempt-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ch-attempt-icon {
+  font-size: 0.85rem;
+}
+
+.ch-attempt--passed  .ch-attempt-icon { color: #a6e3a1; }
+.ch-attempt--pending .ch-attempt-icon { color: #fab387; }
+.ch-attempt--rejected .ch-attempt-icon,
+.ch-attempt--failed  .ch-attempt-icon { color: #f38ba8; }
+
+.ch-attempt-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #cdd6f4;
+}
+
+.ch-attempt-pts {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #f9e2af;
+}
+
+.ch-tc-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ch-tc-item {
+  border-radius: 6px;
+  padding: 0.5rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.ch-tc--pass { background: #a6e3a110; border: 1px solid #a6e3a125; }
+.ch-tc--fail { background: #f38ba810; border: 1px solid #f38ba825; }
+
+.ch-tc-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.ch-tc-icon { font-size: 0.7rem; width: 14px; text-align: center; }
+.ch-tc--pass .ch-tc-icon { color: #a6e3a1; }
+.ch-tc--fail .ch-tc-icon { color: #f38ba8; }
+
+.ch-tc-label { color: #a6adc8; font-weight: 600; }
+
+.ch-tc-output {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.ch-tc-output-label {
+  font-size: 0.62rem;
+  color: #6c7086;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ch-tc-output-label--err { color: #f38ba8; }
+
+.ch-tc-pre {
+  margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #cdd6f4;
+  background: #11111b;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ch-tc-pre--err { color: #f38ba8; }
+
+.ch-feedback {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #a6adc8;
+  font-style: italic;
+  border-top: 1px solid #313244;
+  padding-top: 0.5rem;
+}
+
+.ch-pending-note {
+  font-size: 0.75rem;
+  color: #fab387;
+  font-style: italic;
+}
+</style>

@@ -28,11 +28,40 @@
             {{ store.serverHealth ? 'Servidor OK' : 'Desconectado' }}
           </span>
         </div>
+        <div v-if="auth.user" class="user-menu">
+          <div class="badge-wrapper" ref="badgeWrapperRef">
+            <button class="badge-btn" @click="showBadgePicker = !showBadgePicker" title="Elegir insignia">
+              {{ selectedBadge }}
+            </button>
+            <div v-if="showBadgePicker" class="badge-picker">
+              <button
+                v-for="badge in BADGES"
+                :key="badge.emoji"
+                class="badge-option"
+                :class="{ 'badge-option--active': badge.emoji === selectedBadge }"
+                :title="badge.label"
+                @click="selectBadge(badge.emoji)"
+              >{{ badge.emoji }}</button>
+            </div>
+          </div>
+          <span class="user-name">{{ auth.user.first_name }} {{ auth.user.last_name }}</span>
+          <RouterLink to="/dashboard" class="btn-header-link">Dashboard</RouterLink>
+          <RouterLink v-if="auth.isAdmin" to="/admin" class="btn-header-link">Admin</RouterLink>
+          <button class="btn-logout" @click="handleLogout">Salir</button>
+        </div>
       </div>
     </header>
 
     <!-- Body -->
     <main ref="bodyRef" class="playground-body">
+      <!-- Challenges panel (left) -->
+      <ChallengesPanel
+        v-if="showChallengesPanel"
+        :active-id="challengeStore.activeChallenge?.id ?? null"
+        @close="showChallengesPanel = false"
+        @select="onChallengeSelect"
+      />
+
       <!-- Editor pane -->
       <section class="pane" :style="editorPaneStyle">
         <MonacoEditor v-model="store.code" @run="handleRun" />
@@ -73,6 +102,52 @@
           <span v-if="!store.serverHealth" class="toolbar-warning">
             El servidor no está disponible
           </span>
+
+          <template v-if="auth.isAuthenticated">
+            <div class="toolbar-divider" />
+            <button
+              v-if="snippets.activeSnippet"
+              class="btn-update"
+              :title="`Actualizar '${snippets.activeSnippet.title}'`"
+              @click="handleUpdateSnippet"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21" fill="none" stroke="#1e1e2e" stroke-width="2"/>
+                <polyline points="7 3 7 8 15 8" fill="none" stroke="#1e1e2e" stroke-width="2"/>
+              </svg>
+              Actualizar
+            </button>
+            <button class="btn-secondary" @click="showSaveModal = true">
+              Guardar
+            </button>
+            <button class="btn-secondary btn-snippets" @click="openSnippetsPanel">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              </svg>
+              Mis Snippets
+              <span v-if="snippets.activeSnippet" class="active-dot" />
+            </button>
+            <div class="toolbar-divider" />
+            <button
+              class="btn-secondary btn-challenges"
+              :class="{ 'btn-challenges--active': showChallengesPanel }"
+              @click="showChallengesPanel = !showChallengesPanel"
+            >
+              Retos
+              <span v-if="challengeStore.activeChallenge" class="active-dot" />
+            </button>
+            <button
+              v-if="challengeStore.activeChallenge"
+              class="btn-submit"
+              :disabled="challengeStore.submitting"
+              @click="handleSubmit"
+            >
+              <span v-if="challengeStore.submitting" class="spinner" />
+              <span v-else>Enviar</span>
+            </button>
+          </template>
         </div>
       </section>
 
@@ -91,21 +166,141 @@
         </div>
       </div>
 
-      <!-- Output pane -->
-      <section class="pane" :style="outputPaneStyle">
-        <TerminalOutput :status="store.status" />
+      <!-- Output pane (splits vertically when a challenge is open) -->
+      <section ref="rightPaneRef" class="pane pane--right" :style="outputPaneStyle">
+        <template v-if="challengeStore.activeChallenge">
+          <div class="ch-desc-pane" :style="{ height: `${descSize}%` }">
+            <ChallengeDescription
+              :challenge="challengeStore.activeChallenge"
+              :last-attempt="challengeStore.lastAttempt"
+            />
+          </div>
+          <div
+            class="ch-v-divider"
+            :class="{ 'ch-v-divider--dragging': isVertDragging }"
+            @mousedown.prevent="startVertDrag"
+          />
+        </template>
+        <div class="ch-terminal-pane">
+          <TerminalOutput :status="store.status" />
+        </div>
       </section>
     </main>
+
+    <SaveSnippetModal
+      v-if="showSaveModal"
+      :code="store.code"
+      @close="showSaveModal = false"
+      @saved="showSaveModal = false"
+    />
+
+    <SnippetsPanel
+      v-if="showSnippetsPanel"
+      @close="showSnippetsPanel = false"
+      @load="handleSnippetLoad"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import { usePlaygroundStore } from '@/stores/usePlaygroundStore'
+import { useAuthStore } from '@/stores/useAuthStore'
+import { useSnippetsStore } from '@/stores/useSnippetsStore'
+import { badgesApi, type Badge } from '@/api/badgesApi'
+import { useChallengesStore } from '@/stores/useChallengesStore'
 import MonacoEditor from './components/MonacoEditor.vue'
 import TerminalOutput from './components/TerminalOutput.vue'
+import SaveSnippetModal from './components/SaveSnippetModal.vue'
+import SnippetsPanel from './components/SnippetsPanel.vue'
+import ChallengesPanel from './components/ChallengesPanel.vue'
+import ChallengeDescription from './components/ChallengeDescription.vue'
 
 const store = usePlaygroundStore()
+const auth = useAuthStore()
+const snippets = useSnippetsStore()
+const challengeStore = useChallengesStore()
+const router = useRouter()
+
+const showSaveModal = ref(false)
+const showSnippetsPanel = ref(false)
+const showChallengesPanel = ref(false)
+
+// ── Challenge mode ──────────────────────────────────────────
+const rightPaneRef = ref<HTMLElement | null>(null)
+const descSize = ref(45)    // % of right pane taken by description
+const isVertDragging = ref(false)
+
+async function onChallengeSelect(id: string) {
+  await challengeStore.openChallenge(id)
+  const sc = challengeStore.activeChallenge?.starter_code
+  if (sc) store.code = sc
+}
+
+async function handleSubmit() {
+  if (challengeStore.submitting) return
+  store.resetTerminal()
+  await challengeStore.submit(store.code)
+}
+
+function startVertDrag(e: MouseEvent) {
+  isVertDragging.value = true
+  const startY = e.clientY
+  const startSize = descSize.value
+
+  function onMove(ev: MouseEvent) {
+    if (!rightPaneRef.value) return
+    const rect = rightPaneRef.value.getBoundingClientRect()
+    const delta = ev.clientY - startY
+    descSize.value = Math.min(80, Math.max(20, startSize + (delta / rect.height) * 100))
+  }
+
+  function onUp() {
+    isVertDragging.value = false
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+  }
+
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp)
+}
+
+// ── Badge picker ───────────────────────────────────────────
+const BADGES = ref<Badge[]>([])
+const showBadgePicker = ref(false)
+const badgeWrapperRef = ref<HTMLElement | null>(null)
+
+const selectedBadge = computed(() => auth.user?.badge ?? '🐍')
+
+async function selectBadge(emoji: string) {
+  showBadgePicker.value = false
+  await auth.setBadge(emoji)
+}
+
+function onDocumentClick(e: MouseEvent) {
+  if (badgeWrapperRef.value && !badgeWrapperRef.value.contains(e.target as Node)) {
+    showBadgePicker.value = false
+  }
+}
+
+function handleLogout() {
+  auth.logout()
+  router.push('/login')
+}
+
+async function openSnippetsPanel() {
+  showSnippetsPanel.value = true
+  await snippets.fetch()
+}
+
+function handleSnippetLoad(code: string) {
+  store.code = code
+}
+
+async function handleUpdateSnippet() {
+  await snippets.update(store.code)
+}
 
 // ── Resize logic ──────────────────────────────────────────
 const bodyRef = ref<HTMLElement | null>(null)
@@ -200,11 +395,17 @@ function handleRun() {
 onMounted(async () => {
   checkMobile()
   window.addEventListener('resize', checkMobile)
-  await Promise.all([store.checkHealth(), store.fetchVersion()])
+  document.addEventListener('click', onDocumentClick)
+  await Promise.all([
+    store.checkHealth(),
+    store.fetchVersion(),
+    badgesApi.list().then(data => { BADGES.value = data }),
+  ])
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', checkMobile)
+  document.removeEventListener('click', onDocumentClick)
 })
 </script>
 
@@ -498,6 +699,226 @@ onBeforeUnmount(() => {
   margin-left: auto;
   font-size: 0.72rem;
   color: #f38ba8;
+}
+
+/* ── Snippets toolbar ────────────────────────────────────── */
+.toolbar-divider {
+  width: 1px;
+  height: 18px;
+  background: #313244;
+  margin: 0 0.25rem;
+  flex-shrink: 0;
+}
+
+.btn-update {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.42rem 0.85rem;
+  background: #a6e3a1;
+  color: #1e1e2e;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-update:hover { background: #b8f0b3; }
+
+.btn-snippets {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  position: relative;
+}
+
+.active-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #cba6f7;
+  flex-shrink: 0;
+}
+
+/* ── User menu ───────────────────────────────────────────── */
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid #313244;
+}
+
+.user-name {
+  font-size: 0.78rem;
+  color: #a6adc8;
+  white-space: nowrap;
+}
+
+.btn-header-link {
+  font-size: 0.75rem;
+  color: #cba6f7;
+  text-decoration: none;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid #cba6f740;
+  border-radius: 5px;
+  transition: background 0.15s;
+}
+
+.btn-header-link:hover {
+  background: #cba6f715;
+}
+
+.btn-logout {
+  font-size: 0.75rem;
+  color: #6c7086;
+  background: transparent;
+  border: 1px solid #313244;
+  border-radius: 5px;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.btn-logout:hover {
+  border-color: #585b70;
+  color: #a6adc8;
+}
+
+/* ── Badge picker ────────────────────────────────────────── */
+.badge-wrapper {
+  position: relative;
+}
+
+.badge-btn {
+  background: transparent;
+  border: 1px solid #313244;
+  border-radius: 6px;
+  padding: 0.2rem 0.4rem;
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.badge-btn:hover {
+  border-color: #585b70;
+  background: #313244;
+}
+
+.badge-picker {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 10px;
+  padding: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.badge-option {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.3rem;
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.badge-option:hover {
+  background: #313244;
+}
+
+.badge-option--active {
+  border-color: #cba6f7;
+  background: #cba6f715;
+}
+
+/* ── Challenges toolbar buttons ──────────────────────────── */
+.btn-challenges {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  position: relative;
+}
+
+.btn-challenges--active {
+  border-color: #cba6f7;
+  color: #cba6f7;
+}
+
+.btn-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 1rem;
+  background: #a6e3a1;
+  color: #1e1e2e;
+  border: none;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.btn-submit:hover:not(:disabled) { background: #b8f0b3; }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Right pane split layout ─────────────────────────────── */
+.pane--right {
+  flex-direction: column;
+}
+
+.ch-desc-pane {
+  flex-shrink: 0;
+  overflow: hidden;
+  border-bottom: none;
+}
+
+.ch-v-divider {
+  height: 5px;
+  flex-shrink: 0;
+  background: #313244;
+  cursor: row-resize;
+  transition: background 0.15s;
+  position: relative;
+}
+
+.ch-v-divider:hover,
+.ch-v-divider--dragging {
+  background: #585b70;
+}
+
+.ch-v-divider--dragging {
+  background: #cba6f7;
+}
+
+.ch-v-divider::before {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+.ch-terminal-pane {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Responsive ──────────────────────────────────────────── */

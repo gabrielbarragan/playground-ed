@@ -208,6 +208,51 @@ class InteractiveExecutor:
             pass
 
 
+# ── Strategy: Ejecución con stdin para test cases ─────────────────────────────
+
+class TestCaseSandbox(SandboxStrategy):
+    """Ejecuta código con stdin predefinido. Usado para evaluar test cases."""
+
+    TIMEOUT = 10
+    MAX_OUTPUT = 50_000
+
+    def __init__(self, stdin_data: str = ""):
+        self._stdin = stdin_data
+
+    async def execute(self, code: str) -> dict:
+        tmp_path = _write_temp(code)
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                sys.executable, tmp_path,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=_clean_env(),
+                preexec_fn=_apply_resource_limits,
+            )
+            try:
+                stdout_b, stderr_b = await asyncio.wait_for(
+                    proc.communicate(input=self._stdin.encode("utf-8")),
+                    timeout=self.TIMEOUT,
+                )
+            except asyncio.TimeoutError:
+                proc.kill()
+                await proc.wait()
+                return {
+                    "stdout": "",
+                    "stderr": f"TimeoutError: ejecución superó {self.TIMEOUT}s.",
+                    "return_code": 1,
+                }
+            return {
+                "stdout": stdout_b.decode("utf-8", errors="replace")[: self.MAX_OUTPUT],
+                "stderr": stderr_b.decode("utf-8", errors="replace")[: self.MAX_OUTPUT],
+                "return_code": 0 if proc.returncode == 0 else 1,
+            }
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
+
 # ── Context (compatibilidad con handlers.py) ──────────────────────────────────
 
 class CodeExecutor:
@@ -216,3 +261,7 @@ class CodeExecutor:
 
     async def execute(self, code: str) -> dict:
         return await self._sandbox.execute(code)
+
+    @classmethod
+    async def execute_with_stdin(cls, code: str, stdin: str) -> dict:
+        return await TestCaseSandbox(stdin_data=stdin).execute(code)

@@ -17,10 +17,12 @@ class User(Document):
     password_hash = StringField(required=True)
     course = ReferenceField("Course", required=True)
     is_active = BooleanField(default=True)
+    is_admin = BooleanField(default=False)
     created_at = DateTimeField(default=datetime.utcnow)
     last_login = DateTimeField(null=True)
     # Desnormalizado para ranking en tiempo real sin aggregation costosa
     total_points = IntField(default=0)
+    badge = StringField(default="🐍")
 
     meta = {
         "collection": "users",

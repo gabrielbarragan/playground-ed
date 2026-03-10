@@ -22,6 +22,11 @@ def connect_db() -> None:
 async def close_db():
     disconnect_all()
 
+
+def seed_initial_data() -> None:
+    from app.api.badges.handler import BadgeHandler
+    BadgeHandler.seed_badges()
+
 connect(
         host=MONGO_URI
 )
@@ -51,6 +56,11 @@ app.include_router(
 app.add_event_handler(
     "startup",
     connect_db
+)
+
+app.add_event_handler(
+    "startup",
+    seed_initial_data
 )
 
 

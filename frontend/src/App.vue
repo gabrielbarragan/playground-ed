@@ -1,9 +1,8 @@
 <template>
-  <PlaygroundView />
+  <RouterView />
 </template>
 
 <script setup lang="ts">
-import PlaygroundView from '@/features/playground/PlaygroundView.vue'
 </script>
 
 <style>

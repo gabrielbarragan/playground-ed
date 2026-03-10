@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.auth import get_current_user, UserContext
 from app.api.users.handler import UserHandler
-from app.api.users.serializer import RegisterInSerializer, UpdateProfileSerializer
+from app.api.users.serializer import RegisterInSerializer, UpdateProfileSerializer, SetBadgeSerializer
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Auth"])
 users_router = APIRouter(prefix="/api/v1/users", tags=["Users"])
@@ -57,4 +57,16 @@ async def update_me(
         user = UserHandler.update_profile(ctx.id, body.first_name, body.last_name)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    return user
+
+
+@users_router.put("/me/badge")
+async def set_my_badge(
+    body: SetBadgeSerializer,
+    ctx: UserContext = Depends(get_current_user),
+):
+    try:
+        user = UserHandler.set_badge(ctx.id, body.emoji)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return user

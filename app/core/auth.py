@@ -1,15 +1,19 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
+import hashlib
+import hmac
+import secrets
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from pydantic import BaseModel
 
 from app.core.constants import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_MINUTES
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+_ITERATIONS = 260_000
+_ALGORITHM  = "sha256"
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 oauth2_optional = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
@@ -25,14 +29,23 @@ class UserContext(BaseModel):
     first_name: str
     last_name: str
     course_id: str
+    is_admin: bool = False
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    salt = secrets.token_hex(32)
+    key = hashlib.pbkdf2_hmac(_ALGORITHM, password.encode(), salt.encode(), _ITERATIONS)
+    return f"pbkdf2:{_ALGORITHM}:{_ITERATIONS}${salt}${key.hex()}"
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    try:
+        method, salt, stored_key = hashed.split("$")
+        _, algorithm, iterations = method.split(":")
+        new_key = hashlib.pbkdf2_hmac(algorithm, plain.encode(), salt.encode(), int(iterations))
+        return hmac.compare_digest(new_key.hex(), stored_key)
+    except Exception:
+        return False
 
 
 def create_access_token(user_id: str) -> str:
@@ -56,6 +69,7 @@ def _doc_to_context(user) -> UserContext:
         first_name=user.first_name,
         last_name=user.last_name,
         course_id=str(user.course.id) if user.course else "",
+        is_admin=user.is_admin,
     )
 
 
@@ -76,6 +90,16 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserContext:
             detail="Usuario no encontrado",
         )
     return _doc_to_context(user)
+
+
+async def get_current_admin(token: str = Depends(oauth2_scheme)) -> UserContext:
+    ctx = await get_current_user(token)
+    if not ctx.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso restringido a administradores",
+        )
+    return ctx
 
 
 async def get_optional_user(

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, shallowRef } from 'vue'
 import { metaApi } from '@/api/metaApi'
+import { useAuthStore } from '@/stores/useAuthStore'
 import type { ExecutionStatus, WsServerMessage } from '@/types/playground'
 
 export const usePlaygroundStore = defineStore('playground', () => {
@@ -19,7 +20,9 @@ export const usePlaygroundStore = defineStore('playground', () => {
   // ── WebSocket helpers ─────────────────────────────────────
   function _wsUrl(): string {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    return `${proto}//${window.location.host}/ws/run`
+    const base = `${proto}//${window.location.host}/ws/run`
+    const token = useAuthStore().token
+    return token ? `${base}?token=${token}` : base
   }
 
   function _teardown() {

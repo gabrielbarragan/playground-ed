@@ -13,3 +13,7 @@ class RegisterInSerializer(BaseModel):
 class UpdateProfileSerializer(BaseModel):
     first_name: Optional[str] = Field(None, min_length=1, max_length=100)
     last_name: Optional[str] = Field(None, min_length=1, max_length=100)
+
+
+class SetBadgeSerializer(BaseModel):
+    emoji: str = Field(..., min_length=1, max_length=10)

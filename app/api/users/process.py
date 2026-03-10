@@ -16,6 +16,8 @@ def _serialize_user(user) -> dict:
         "first_name": user.first_name,
         "last_name": user.last_name,
         "email": user.email,
+        "is_admin": user.is_admin,
+        "badge": user.badge or "🐍",
         "course": {
             "id": str(course.id),
             "name": course.name,
@@ -76,4 +78,15 @@ def update_profile(user_id: str, first_name: Optional[str], last_name: Optional[
     if fields:
         _users.update(user, **fields)
 
+    return _serialize_user(user)
+
+
+def set_badge(user_id: str, emoji: str) -> dict:
+    from app.api.badges.process import badge_exists
+    user = _users.get_active_by_id(user_id)
+    if not user:
+        raise ValueError("Usuario no encontrado")
+    if not badge_exists(emoji):
+        raise ValueError("Badge no válido")
+    _users.update(user, badge=emoji)
     return _serialize_user(user)
