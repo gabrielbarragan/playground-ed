@@ -72,10 +72,22 @@ function defineTheme() {
   })
 }
 
+function blockEvent(e: Event) {
+  e.preventDefault()
+  e.stopPropagation()
+}
+
 onMounted(() => {
   if (!containerRef.value) return
 
   defineTheme()
+
+  // Bloquear click derecho y eventos de portapapeles en el contenedor DOM
+  // capture:true para interceptar antes de que Monaco llame stopPropagation()
+  containerRef.value.addEventListener('contextmenu', blockEvent, true)
+  containerRef.value.addEventListener('copy', blockEvent, true)
+  containerRef.value.addEventListener('cut', blockEvent, true)
+  containerRef.value.addEventListener('paste', blockEvent, true)
 
   editor = monaco.editor.create(containerRef.value, {
     value: props.modelValue,
@@ -102,6 +114,7 @@ onMounted(() => {
       indentation: true,
     },
     suggest: { preview: true },
+    contextmenu: false,
     overviewRulerLanes: 0,
     hideCursorInOverviewRuler: true,
     scrollbar: {
@@ -118,6 +131,12 @@ onMounted(() => {
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
     emit('run')
   })
+
+  // Bloquear copy, cut y paste a nivel de Monaco (teclado y menú de Monaco)
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, () => {})
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX, () => {})
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {})
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyV, () => {})
 })
 
 watch(
@@ -130,6 +149,12 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  if (containerRef.value) {
+    containerRef.value.removeEventListener('contextmenu', blockEvent, true)
+    containerRef.value.removeEventListener('copy', blockEvent, true)
+    containerRef.value.removeEventListener('cut', blockEvent, true)
+    containerRef.value.removeEventListener('paste', blockEvent, true)
+  }
   editor?.dispose()
 })
 </script>
