@@ -12,6 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!token.value && !!user.value)
   const isAdmin = computed(() => user.value?.is_admin ?? false)
+  const isSuperAdmin = computed(() => user.value?.is_superadmin ?? false)
 
   function _saveToken(t: string) {
     token.value = t
@@ -62,6 +63,7 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     isAuthenticated,
     isAdmin,
+    isSuperAdmin,
     login,
     register,
     fetchMe,

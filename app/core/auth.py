@@ -30,6 +30,7 @@ class UserContext(BaseModel):
     last_name: str
     course_id: str
     is_admin: bool = False
+    is_superadmin: bool = False
 
 
 def hash_password(password: str) -> str:
@@ -70,6 +71,7 @@ def _doc_to_context(user) -> UserContext:
         last_name=user.last_name,
         course_id=str(user.course.id) if user.course else "",
         is_admin=user.is_admin,
+        is_superadmin=user.is_superadmin,
     )
 
 
@@ -98,6 +100,16 @@ async def get_current_admin(token: str = Depends(oauth2_scheme)) -> UserContext:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Acceso restringido a administradores",
+        )
+    return ctx
+
+
+async def get_current_superadmin(token: str = Depends(oauth2_scheme)) -> UserContext:
+    ctx = await get_current_user(token)
+    if not ctx.is_superadmin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso restringido a superadministradores",
         )
     return ctx
 

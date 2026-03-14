@@ -35,6 +35,12 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
+      path: '/superadmin',
+      name: 'superadmin',
+      component: () => import('@/features/superadmin/SuperAdminView.vue'),
+      meta: { requiresAuth: true, requiresSuperAdmin: true },
+    },
+    {
       path: '/:pathMatch(.*)*',
       redirect: '/',
     },
@@ -54,6 +60,10 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.requiresAdmin && !auth.isAdmin) {
+    return { name: 'playground' }
+  }
+
+  if (to.meta.requiresSuperAdmin && !auth.isSuperAdmin) {
     return { name: 'playground' }
   }
 

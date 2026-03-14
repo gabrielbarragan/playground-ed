@@ -4,6 +4,7 @@ export interface AuthUser {
   last_name: string
   email: string
   is_admin: boolean
+  is_superadmin: boolean
   badge: string
   course: { id: string; name: string; code: string }
   total_points: number
