@@ -18,6 +18,7 @@ def _serialize_user(user) -> dict:
         "email": user.email,
         "is_admin": user.is_admin,
         "badge": user.badge or "🐍",
+        "is_superadmin": user.is_superadmin,
         "course": {
             "id": str(course.id),
             "name": course.name,

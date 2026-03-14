@@ -8,6 +8,7 @@ from app.api.courses import views as courses
 from app.api.snippets import views as snippets
 from app.api.dashboard import views as dashboard
 from app.api.admin import views as admin
+from app.api.superadmin import views as superadmin
 from app.api.badges import views as badges
 from app.api.challenges import views as challenges
 
@@ -21,6 +22,7 @@ urls.include_router(courses.router)
 urls.include_router(snippets.router)
 urls.include_router(dashboard.router)
 urls.include_router(admin.router)
+urls.include_router(superadmin.router)
 urls.include_router(badges.router)
 urls.include_router(challenges.router)
 urls.include_router(challenges.submissions_router)

@@ -18,6 +18,7 @@ class User(Document):
     course = ReferenceField("Course", required=True)
     is_active = BooleanField(default=True)
     is_admin = BooleanField(default=False)
+    is_superadmin = BooleanField(default=False)
     created_at = DateTimeField(default=datetime.utcnow)
     last_login = DateTimeField(null=True)
     # Desnormalizado para ranking en tiempo real sin aggregation costosa
