@@ -46,7 +46,7 @@
           </div>
           <span class="user-name">{{ auth.user.first_name }} {{ auth.user.last_name }}</span>
           <RouterLink to="/dashboard" class="btn-header-link">Dashboard</RouterLink>
-          <RouterLink v-if="auth.isAdmin" to="/admin" class="btn-header-link">Admin</RouterLink>
+          <RouterLink v-if="auth.isAdmin" to="/admin" class="btn-header-link">Docente</RouterLink>
           <RouterLink v-if="auth.isSuperAdmin" to="/superadmin" class="btn-header-link">Superadmin</RouterLink>
           <button class="btn-logout" @click="handleLogout">Salir</button>
         </div>
