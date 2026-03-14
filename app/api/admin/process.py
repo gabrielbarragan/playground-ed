@@ -55,6 +55,55 @@ def set_user_active(user_id: str, is_active: bool) -> dict:
     return _serialize_user(user)
 
 
+def list_courses() -> dict:
+    courses = list(_courses.get_all())
+    result = [
+        {
+            "id": str(c.id),
+            "name": c.name,
+            "code": c.code,
+            "description": c.description,
+            "is_active": c.is_active,
+            "created_at": c.created_at.isoformat(),
+        }
+        for c in courses
+    ]
+    return {"total": len(result), "courses": result}
+
+
+def create_course(name: str, code: str, description: str) -> dict:
+    from app.api.courses.querysets import CourseQueryset
+    qs = CourseQueryset()
+    if qs.get_by_code(code):
+        raise ValueError(f"Ya existe un curso con el código '{code.upper()}'")
+    course = qs.create(name=name, code=code.upper(), description=description)
+    return {
+        "id": str(course.id),
+        "name": course.name,
+        "code": course.code,
+        "description": course.description,
+        "is_active": course.is_active,
+        "created_at": course.created_at.isoformat(),
+    }
+
+
+def toggle_course(course_id: str) -> dict:
+    from app.api.courses.querysets import CourseQueryset
+    qs = CourseQueryset()
+    course = qs.get_by_id(course_id)
+    if not course:
+        raise ValueError("Curso no encontrado")
+    qs.update(course, is_active=not course.is_active)
+    return {
+        "id": str(course.id),
+        "name": course.name,
+        "code": course.code,
+        "description": course.description,
+        "is_active": course.is_active,
+        "created_at": course.created_at.isoformat(),
+    }
+
+
 def get_global_stats() -> dict:
     today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     last_7_days_start = today - timedelta(days=6)

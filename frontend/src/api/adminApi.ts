@@ -18,6 +18,21 @@ export interface UsersListResponse {
   users: AdminUser[]
 }
 
+export interface AdminCourse {
+  id: string
+  name: string
+  code: string
+  description: string
+  is_active: boolean
+  created_at: string
+}
+
+export interface CreateCoursePayload {
+  name: string
+  code: string
+  description?: string
+}
+
 export interface GlobalStats {
   users: {
     active: number
@@ -49,6 +64,21 @@ export const adminApi = {
 
   async deactivateUser(id: string): Promise<AdminUser> {
     const { data } = await apiClient.put<AdminUser>(`/api/v1/admin/users/${id}/deactivate`)
+    return data
+  },
+
+  async listCourses(): Promise<{ total: number; courses: AdminCourse[] }> {
+    const { data } = await apiClient.get('/api/v1/admin/courses')
+    return data
+  },
+
+  async createCourse(payload: CreateCoursePayload): Promise<AdminCourse> {
+    const { data } = await apiClient.post('/api/v1/admin/courses', payload)
+    return data
+  },
+
+  async toggleCourse(courseId: string): Promise<AdminCourse> {
+    const { data } = await apiClient.patch(`/api/v1/admin/courses/${courseId}/toggle`)
     return data
   },
 }

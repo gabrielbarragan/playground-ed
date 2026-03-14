@@ -84,6 +84,69 @@
         <SubmissionsPanel />
       </template>
 
+      <!-- ── Cursos tab ─────────────────────────────────── -->
+      <template v-if="activeTab === 'courses'">
+        <div class="courses-tab-layout">
+
+          <!-- Formulario -->
+          <div class="section course-form-card">
+            <h2 class="section-title">Nuevo curso</h2>
+            <form class="course-form" @submit.prevent="submitCourse">
+              <label class="form-label">
+                Nombre
+                <input v-model="courseForm.name" class="search-input" style="width:100%" placeholder="Ej: Python Inicial" required />
+              </label>
+              <label class="form-label">
+                Código
+                <input v-model="courseForm.code" class="search-input" style="width:100%;text-transform:uppercase" placeholder="Ej: PY2024" required maxlength="20" />
+              </label>
+              <label class="form-label">
+                Descripción
+                <input v-model="courseForm.description" class="search-input" style="width:100%" placeholder="Opcional" />
+              </label>
+              <p v-if="courseError" style="color:#f38ba8;font-size:0.8rem;margin:0">{{ courseError }}</p>
+              <button class="btn-primary" type="submit" :disabled="courseSubmitting">
+                {{ courseSubmitting ? 'Creando...' : '+ Crear curso' }}
+              </button>
+            </form>
+          </div>
+
+          <!-- Lista -->
+          <div class="section" style="flex:1">
+            <h2 class="section-title">
+              Cursos
+              <span class="tab-count">{{ courses.length }}</span>
+            </h2>
+            <div v-if="loadingCourses" class="table-loading"><span class="spinner" /> Cargando...</div>
+            <ul v-else class="course-manage-list">
+              <li v-for="course in courses" :key="course.id" class="course-manage-item">
+                <div class="course-manage-info">
+                  <span class="course-code">{{ course.code }}</span>
+                  <span class="course-name">{{ course.name }}</span>
+                  <span v-if="course.description" class="course-manage-desc">{{ course.description }}</span>
+                </div>
+                <div class="course-manage-actions">
+                  <span class="status-badge" :class="course.is_active ? 'status--active' : 'status--inactive'">
+                    {{ course.is_active ? 'Activo' : 'Inactivo' }}
+                  </span>
+                  <button
+                    class="btn-action"
+                    :class="course.is_active ? 'btn-action--deactivate' : 'btn-action--activate'"
+                    :disabled="toggleCourseId === course.id"
+                    @click="onToggleCourse(course)"
+                  >
+                    <span v-if="toggleCourseId === course.id" class="spinner spinner--sm" />
+                    {{ course.is_active ? 'Desactivar' : 'Activar' }}
+                  </button>
+                </div>
+              </li>
+              <li v-if="courses.length === 0" class="table-empty">No hay cursos aún.</li>
+            </ul>
+          </div>
+
+        </div>
+      </template>
+
       <!-- ── Usuarios tab ───────────────────────────────── -->
       <template v-if="activeTab === 'users'">
 
@@ -256,7 +319,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { adminApi, type GlobalStats, type AdminUser } from '@/api/adminApi'
+import { adminApi, type GlobalStats, type AdminUser, type AdminCourse } from '@/api/adminApi'
 import { challengesApi } from '@/api/challengesApi'
 import type { Challenge } from '@/types/challenges'
 import ChallengeFormModal from './components/ChallengeFormModal.vue'
@@ -266,6 +329,7 @@ const auth = useAuthStore()
 
 const TABS = [
   { id: 'users', label: 'Usuarios' },
+  { id: 'courses', label: 'Cursos' },
   { id: 'challenges', label: 'Retos' },
   { id: 'submissions', label: 'Revisiones' },
 ]
@@ -365,8 +429,55 @@ function formatDate(iso: string): string {
   })
 }
 
+// ── Courses ─────────────────────────────────────────────────
+const courses = ref<AdminCourse[]>([])
+const loadingCourses = ref(false)
+const toggleCourseId = ref<string | null>(null)
+const courseForm = ref({ name: '', code: '', description: '' })
+const courseSubmitting = ref(false)
+const courseError = ref('')
+
+async function loadCourses() {
+  loadingCourses.value = true
+  try {
+    const res = await adminApi.listCourses()
+    courses.value = res.courses
+  } finally {
+    loadingCourses.value = false
+  }
+}
+
+async function submitCourse() {
+  courseError.value = ''
+  courseSubmitting.value = true
+  try {
+    const created = await adminApi.createCourse({
+      name: courseForm.value.name,
+      code: courseForm.value.code,
+      description: courseForm.value.description,
+    })
+    courses.value.unshift(created)
+    courseForm.value = { name: '', code: '', description: '' }
+  } catch (e: any) {
+    courseError.value = e?.response?.data?.detail ?? 'Error al crear curso'
+  } finally {
+    courseSubmitting.value = false
+  }
+}
+
+async function onToggleCourse(course: AdminCourse) {
+  toggleCourseId.value = course.id
+  try {
+    const updated = await adminApi.toggleCourse(course.id)
+    const idx = courses.value.findIndex(c => c.id === course.id)
+    if (idx !== -1) courses.value[idx] = updated
+  } finally {
+    toggleCourseId.value = null
+  }
+}
+
 onMounted(async () => {
-  const [statsRes] = await Promise.all([adminApi.getStats(), loadUsers(), loadChallenges()])
+  const [statsRes] = await Promise.all([adminApi.getStats(), loadUsers(), loadChallenges(), loadCourses()])
   stats.value = statsRes
   loadingStats.value = false
 })
@@ -977,11 +1088,82 @@ onMounted(async () => {
 .diff--medium { background: #3a2a1e; color: #fab387; }
 .diff--hard   { background: #3a1e1e; color: #f38ba8; }
 
+/* ── Courses tab ─────────────────────────────────────────── */
+.courses-tab-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.course-form-card {
+  min-width: 260px;
+  max-width: 300px;
+}
+
+.course-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: #6c7086;
+}
+
+.course-manage-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.course-manage-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.85rem;
+  background: #1e1e2e;
+  border-radius: 8px;
+  border: 1px solid #313244;
+}
+
+.course-manage-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.course-manage-desc {
+  font-size: 0.72rem;
+  color: #45475a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.course-manage-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 700px) {
   .admin-body { padding: 1rem; }
   .search-input { width: 100%; }
   .table-controls { width: 100%; flex-direction: column; align-items: flex-start; }
   .challenges-grid { grid-template-columns: 1fr; }
+  .courses-tab-layout { flex-direction: column; }
+  .course-form-card { min-width: unset; max-width: unset; width: 100%; }
 }
 </style>
