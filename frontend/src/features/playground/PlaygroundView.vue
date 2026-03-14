@@ -945,5 +945,27 @@ onBeforeUnmount(() => {
   .shortcut-hint {
     display: none;
   }
+
+  .header-title {
+    display: none;
+  }
+
+  .header-version {
+    display: none;
+  }
+
+  .user-name {
+    display: none;
+  }
+
+  .header-right {
+    gap: 0.4rem;
+  }
+
+  .btn-header-link,
+  .btn-logout {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.45rem;
+  }
 }
 </style>
