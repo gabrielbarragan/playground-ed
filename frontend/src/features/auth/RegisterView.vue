@@ -93,11 +93,13 @@
         <RouterLink to="/login" class="auth-link">Iniciá Sesión</RouterLink>
       </p>
     </div>
+    <AppFooter :fixed="true" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import AppFooter from '@/components/AppFooter.vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { coursesApi } from '@/api/coursesApi'

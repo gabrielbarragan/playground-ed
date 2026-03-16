@@ -65,11 +65,14 @@
 
     <!-- Error toast -->
     <div v-if="errorMsg" class="error-toast">{{ errorMsg }}</div>
+
+    <AppFooter />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import AppFooter from '@/components/AppFooter.vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useQuizzesStore } from '@/stores/useQuizzesStore'
 import type { QuizAttempt } from '@/types/quizzes'
