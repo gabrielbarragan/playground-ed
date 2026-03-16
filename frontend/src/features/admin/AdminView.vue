@@ -370,11 +370,13 @@
       @close="showQuizForm = false"
       @saved="onQuizSaved"
     />
+    <AppFooter />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import AppFooter from '@/components/AppFooter.vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { adminApi, type GlobalStats, type AdminUser, type AdminCourse } from '@/api/adminApi'
 import { challengesApi } from '@/api/challengesApi'

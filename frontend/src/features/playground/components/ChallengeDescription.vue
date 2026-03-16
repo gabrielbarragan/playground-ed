@@ -208,6 +208,7 @@ const attemptTitle = computed(() => {
   overflow-y: auto;
   overflow-x: hidden;
   min-width: 0;
+  max-width: 100%;
   padding: 0.85rem 1rem;
   display: flex;
   flex-direction: column;
@@ -233,15 +234,32 @@ const attemptTitle = computed(() => {
   color: #a6adc8;
   white-space: pre-wrap;
   word-break: break-word;
+  overflow-wrap: break-word;
   line-height: 1.6;
   margin: 0;
+  min-width: 0;
+  max-width: 100%;
   font-family: 'JetBrains Mono', monospace;
 }
 
 /* ── Markdown description styles ─────────────────────────── */
+.ch-markdown {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.ch-markdown :deep(*) {
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
 .ch-markdown :deep(p) {
   margin: 0 0 0.6em;
   line-height: 1.6;
+  white-space: normal;
 }
 .ch-markdown :deep(p:last-child) { margin-bottom: 0; }
 
@@ -264,7 +282,12 @@ const attemptTitle = computed(() => {
   border-radius: 6px;
   padding: 0.6rem 0.75rem;
   overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
   margin: 0.5em 0;
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
 }
 .ch-markdown :deep(pre code) {
   background: none;
@@ -272,6 +295,9 @@ const attemptTitle = computed(() => {
   padding: 0;
   color: #cdd6f4;
   font-size: 0.78rem;
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
 }
 
 .ch-markdown :deep(ul),

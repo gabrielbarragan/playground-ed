@@ -139,11 +139,13 @@
         </div>
       </section>
     </main>
+    <AppFooter />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import AppFooter from '@/components/AppFooter.vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { dashboardApi, type HeatmapResponse, type RankingResponse, type ActivityDay } from '@/api/dashboardApi'
 
