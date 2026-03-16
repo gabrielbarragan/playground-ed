@@ -304,6 +304,57 @@
 
       </template><!-- end users tab -->
 
+      <!-- ── Evaluaciones tab ───────────────────────────── -->
+      <template v-if="activeTab === 'quizzes'">
+        <div class="tab-toolbar">
+          <span class="tab-toolbar-title">
+            Evaluaciones <span class="tab-count">{{ quizzes.length }}</span>
+          </span>
+          <div class="tab-toolbar-right">
+            <label class="toggle-label">
+              <input v-model="showInactiveQuizzes" type="checkbox" class="toggle-check" @change="loadQuizzes" />
+              <span class="toggle-text">Ver inactivos</span>
+            </label>
+            <button class="btn-primary" @click="openQuizForm(null)">+ Nuevo quiz</button>
+          </div>
+        </div>
+
+        <div v-if="loadingQuizzes" class="table-loading"><span class="spinner" /> Cargando...</div>
+        <div v-else-if="!quizzes.length" class="table-empty">No hay evaluaciones. Crea la primera.</div>
+        <div v-else class="challenges-grid">
+          <div
+            v-for="q in quizzes" :key="q.id"
+            class="challenge-card"
+            :class="{ 'challenge-card--inactive': !q.is_active }"
+          >
+            <div class="cc-header">
+              <span v-if="!q.is_active" class="cc-inactive-badge">Inactivo</span>
+              <span class="cc-pts">{{ q.points_on_complete + q.points_on_pass }} pts</span>
+            </div>
+            <h3 class="cc-title">{{ q.title }}</h3>
+            <div class="cc-meta">
+              <span class="cc-tc">{{ q.question_count }} preguntas · aprobar {{ q.passing_score }}</span>
+              <span v-for="course in q.courses" :key="course.id" class="cc-course">{{ course.code }}</span>
+            </div>
+            <div class="cc-actions">
+              <button class="btn-edit" @click="openQuizForm(q)">Editar</button>
+              <button class="btn-edit" style="background:#2a1f3d;border-color:#cba6f750;color:#cba6f7" @click="resultsQuiz = q">Resultados</button>
+              <button class="btn-deactivate" @click="toggleQuizActive(q)">
+                {{ q.is_active ? 'Desactivar' : 'Activar' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results panel inline -->
+        <QuizResultsPanel
+          v-if="resultsQuiz"
+          :quiz-id="resultsQuiz.id"
+          :quiz-title="resultsQuiz.title"
+          @close="resultsQuiz = null"
+        />
+      </template><!-- end quizzes tab -->
+
     </main>
 
     <!-- Modals -->
@@ -312,6 +363,12 @@
       :challenge="editingChallenge"
       @close="showChallengeForm = false"
       @saved="onChallengeSaved"
+    />
+    <QuizFormModal
+      v-if="showQuizForm"
+      :quiz="editingQuiz"
+      @close="showQuizForm = false"
+      @saved="onQuizSaved"
     />
   </div>
 </template>
@@ -324,6 +381,10 @@ import { challengesApi } from '@/api/challengesApi'
 import type { Challenge } from '@/types/challenges'
 import ChallengeFormModal from './components/ChallengeFormModal.vue'
 import SubmissionsPanel from './components/SubmissionsPanel.vue'
+import QuizFormModal from './components/QuizFormModal.vue'
+import QuizResultsPanel from './components/QuizResultsPanel.vue'
+import { quizzesApi } from '@/api/quizzesApi'
+import type { Quiz } from '@/types/quizzes'
 
 const auth = useAuthStore()
 
@@ -332,6 +393,7 @@ const TABS = [
   { id: 'courses', label: 'Cursos' },
   { id: 'challenges', label: 'Retos' },
   { id: 'submissions', label: 'Revisiones' },
+  { id: 'quizzes', label: 'Evaluaciones' },
 ]
 const activeTab = ref('users')
 
@@ -476,8 +538,43 @@ async function onToggleCourse(course: AdminCourse) {
   }
 }
 
+// ── Quizzes ─────────────────────────────────────────────────
+const quizzes = ref<Quiz[]>([])
+const loadingQuizzes = ref(false)
+const showInactiveQuizzes = ref(false)
+const showQuizForm = ref(false)
+const editingQuiz = ref<Quiz | null>(null)
+const resultsQuiz = ref<Quiz | null>(null)
+
+async function loadQuizzes() {
+  loadingQuizzes.value = true
+  try {
+    const res = await quizzesApi.adminList(showInactiveQuizzes.value)
+    quizzes.value = res.quizzes
+  } finally {
+    loadingQuizzes.value = false
+  }
+}
+
+function openQuizForm(q: Quiz | null) {
+  editingQuiz.value = q
+  showQuizForm.value = true
+}
+
+function onQuizSaved(q: Quiz) {
+  const idx = quizzes.value.findIndex(x => x.id === q.id)
+  if (idx >= 0) quizzes.value[idx] = q
+  else quizzes.value.unshift(q)
+}
+
+async function toggleQuizActive(q: Quiz) {
+  const updated = await quizzesApi.adminToggle(q.id)
+  const idx = quizzes.value.findIndex(x => x.id === q.id)
+  if (idx >= 0) quizzes.value[idx] = updated
+}
+
 onMounted(async () => {
-  const [statsRes] = await Promise.all([adminApi.getStats(), loadUsers(), loadChallenges(), loadCourses()])
+  const [statsRes] = await Promise.all([adminApi.getStats(), loadUsers(), loadChallenges(), loadCourses(), loadQuizzes()])
   stats.value = statsRes
   loadingStats.value = false
 })

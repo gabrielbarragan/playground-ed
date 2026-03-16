@@ -19,7 +19,7 @@
       <!-- Description -->
       <div class="ch-section">
         <span class="ch-section-label">Descripción</span>
-        <pre class="ch-text">{{ challenge.description }}</pre>
+        <div class="ch-text ch-markdown" v-html="descriptionHtml" />
       </div>
 
       <!-- Example I/O -->
@@ -85,12 +85,17 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { marked } from 'marked'
 import type { Challenge, Attempt } from '@/types/challenges'
 
 const props = defineProps<{
   challenge: Challenge
   lastAttempt: Attempt | null
 }>()
+
+const descriptionHtml = computed(() =>
+  marked(props.challenge.description ?? '', { breaks: true }) as string,
+)
 
 function diffLabel(d: string) {
   return d === 'easy' ? 'Fácil' : d === 'medium' ? 'Media' : 'Difícil'
@@ -231,6 +236,76 @@ const attemptTitle = computed(() => {
   line-height: 1.6;
   margin: 0;
   font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Markdown description styles ─────────────────────────── */
+.ch-markdown :deep(p) {
+  margin: 0 0 0.6em;
+  line-height: 1.6;
+}
+.ch-markdown :deep(p:last-child) { margin-bottom: 0; }
+
+.ch-markdown :deep(strong) { color: #cdd6f4; font-weight: 700; }
+.ch-markdown :deep(em) { color: #cdd6f4; font-style: italic; }
+
+.ch-markdown :deep(code) {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78em;
+  background: #11111b;
+  border: 1px solid #313244;
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  color: #cba6f7;
+}
+
+.ch-markdown :deep(pre) {
+  background: #11111b;
+  border: 1px solid #313244;
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.ch-markdown :deep(pre code) {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #cdd6f4;
+  font-size: 0.78rem;
+}
+
+.ch-markdown :deep(ul),
+.ch-markdown :deep(ol) {
+  margin: 0.4em 0 0.6em 1.25em;
+  padding: 0;
+  line-height: 1.6;
+}
+.ch-markdown :deep(li) { margin-bottom: 0.2em; }
+
+.ch-markdown :deep(h1),
+.ch-markdown :deep(h2),
+.ch-markdown :deep(h3) {
+  color: #cdd6f4;
+  font-weight: 700;
+  margin: 0.75em 0 0.35em;
+  line-height: 1.3;
+}
+.ch-markdown :deep(h1) { font-size: 1em; }
+.ch-markdown :deep(h2) { font-size: 0.92em; }
+.ch-markdown :deep(h3) { font-size: 0.85em; }
+
+.ch-markdown :deep(blockquote) {
+  border-left: 3px solid #cba6f7;
+  margin: 0.5em 0;
+  padding: 0.25em 0.75em;
+  color: #6c7086;
+  font-style: italic;
+}
+
+.ch-markdown :deep(hr) {
+  border: none;
+  border-top: 1px solid #313244;
+  margin: 0.75em 0;
 }
 
 .ch-examples {

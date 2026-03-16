@@ -41,6 +41,12 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresSuperAdmin: true },
     },
     {
+      path: '/quizzes',
+      name: 'quizzes',
+      component: () => import('@/features/quizzes/QuizzesView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/:pathMatch(.*)*',
       redirect: '/',
     },

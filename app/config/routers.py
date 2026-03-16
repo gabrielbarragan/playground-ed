@@ -11,6 +11,7 @@ from app.api.admin import views as admin
 from app.api.superadmin import views as superadmin
 from app.api.badges import views as badges
 from app.api.challenges import views as challenges
+from app.api.quizzes import views as quizzes
 
 urls = APIRouter()
 
@@ -27,3 +28,5 @@ urls.include_router(badges.router)
 urls.include_router(challenges.router)
 urls.include_router(challenges.submissions_router)
 urls.include_router(challenges.student_router)
+urls.include_router(quizzes.admin_router)
+urls.include_router(quizzes.student_router)

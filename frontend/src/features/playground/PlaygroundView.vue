@@ -48,6 +48,8 @@
           <RouterLink to="/dashboard" class="btn-header-link">Dashboard</RouterLink>
           <RouterLink v-if="auth.isAdmin" to="/admin" class="btn-header-link">Docente</RouterLink>
           <RouterLink v-if="auth.isSuperAdmin" to="/superadmin" class="btn-header-link">Superadmin</RouterLink>
+          <RouterLink to="/quizzes" class="btn-header-link">Evaluaciones</RouterLink>
+          <RouterLink v-if="auth.isAdmin" to="/admin" class="btn-header-link">Admin</RouterLink>
           <button class="btn-logout" @click="handleLogout">Salir</button>
         </div>
       </div>
