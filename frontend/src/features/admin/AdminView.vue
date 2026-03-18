@@ -257,11 +257,19 @@
           <table class="users-table">
             <thead>
               <tr>
-                <th>Nombre</th>
+                <th class="th-sort" :class="{ 'th-sort--active': sortField === 'name' }" @click="toggleSort('name')">
+                  Nombre <span class="sort-icon">{{ sortIcon('name') }}</span>
+                </th>
                 <th>Email</th>
-                <th>Curso</th>
-                <th>Puntos</th>
-                <th>Último acceso</th>
+                <th class="th-sort" :class="{ 'th-sort--active': sortField === 'created_at' }" @click="toggleSort('created_at')">
+                  Curso / Registro <span class="sort-icon">{{ sortIcon('created_at') }}</span>
+                </th>
+                <th class="th-sort" :class="{ 'th-sort--active': sortField === 'points' }" @click="toggleSort('points')">
+                  Puntos <span class="sort-icon">{{ sortIcon('points') }}</span>
+                </th>
+                <th class="th-sort" :class="{ 'th-sort--active': sortField === 'last_login' }" @click="toggleSort('last_login')">
+                  Último acceso <span class="sort-icon">{{ sortIcon('last_login') }}</span>
+                </th>
                 <th>Estado</th>
                 <th>Acción</th>
               </tr>
@@ -273,8 +281,11 @@
                 </td>
                 <td class="cell-email">{{ user.email }}</td>
                 <td>
-                  <span v-if="user.course" class="course-badge">{{ user.course.code }}</span>
-                  <span v-else class="cell-null">—</span>
+                  <div style="display:flex;flex-direction:column;gap:0.15rem">
+                    <span v-if="user.course" class="course-badge">{{ user.course.code }}</span>
+                    <span v-else class="cell-null">—</span>
+                    <span class="cell-date">{{ formatDate(user.created_at) }}</span>
+                  </div>
                 </td>
                 <td class="cell-pts">{{ user.total_points }}</td>
                 <td class="cell-date">
@@ -443,6 +454,24 @@ const searchQuery = ref('')
 const includeInactive = ref(false)
 const selectedCourseId = ref<string | null>(null)
 
+type SortField = 'name' | 'points' | 'last_login' | 'created_at'
+const sortField = ref<SortField>('name')
+const sortDir = ref<'asc' | 'desc'>('asc')
+
+function toggleSort(field: SortField) {
+  if (sortField.value === field) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortField.value = field
+    sortDir.value = field === 'points' || field === 'last_login' ? 'desc' : 'asc'
+  }
+}
+
+function sortIcon(field: SortField): string {
+  if (sortField.value !== field) return '↕'
+  return sortDir.value === 'asc' ? '▲' : '▼'
+}
+
 const filteredUsers = computed(() => {
   let list = users.value
   if (selectedCourseId.value) {
@@ -455,7 +484,21 @@ const filteredUsers = computed(() => {
       u.email.toLowerCase().includes(q),
     )
   }
-  return list
+  const dir = sortDir.value === 'asc' ? 1 : -1
+  return [...list].sort((a, b) => {
+    switch (sortField.value) {
+      case 'name':
+        return dir * `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'es')
+      case 'points':
+        return dir * (a.total_points - b.total_points)
+      case 'last_login':
+        return dir * ((a.last_login ? new Date(a.last_login).getTime() : 0) - (b.last_login ? new Date(b.last_login).getTime() : 0))
+      case 'created_at':
+        return dir * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      default:
+        return 0
+    }
+  })
 })
 
 async function loadUsers() {
@@ -1255,6 +1298,23 @@ onMounted(async () => {
   gap: 0.5rem;
   flex-shrink: 0;
 }
+
+/* ── Sortable headers ────────────────────────────────────── */
+.th-sort {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+.th-sort:hover { color: #a6adc8; }
+.th-sort--active { color: #cba6f7; }
+
+.sort-icon {
+  font-size: 0.6rem;
+  opacity: 0.6;
+  margin-left: 0.2rem;
+  vertical-align: middle;
+}
+.th-sort--active .sort-icon { opacity: 1; }
 
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 700px) {
