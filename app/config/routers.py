@@ -12,6 +12,7 @@ from app.api.superadmin import views as superadmin
 from app.api.badges import views as badges
 from app.api.challenges import views as challenges
 from app.api.quizzes import views as quizzes
+from app.api.sandbox_achievements import views as sandbox_achievements
 
 urls = APIRouter()
 
@@ -30,3 +31,5 @@ urls.include_router(challenges.submissions_router)
 urls.include_router(challenges.student_router)
 urls.include_router(quizzes.admin_router)
 urls.include_router(quizzes.student_router)
+urls.include_router(sandbox_achievements.admin_router)
+urls.include_router(sandbox_achievements.student_router)

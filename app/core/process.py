@@ -111,7 +111,7 @@ class InteractiveExecutor:
     WALL_TIMEOUT = 120  # tiempo máximo total de sesión en segundos
     MAX_OUTPUT = 50_000
 
-    async def run(self, code: str, websocket) -> None:
+    async def run(self, code: str, websocket) -> int:
         tmp_path = _write_temp(code)
         proc = None
         try:
@@ -151,14 +151,17 @@ class InteractiveExecutor:
 
             await asyncio.gather(stdout_task, stderr_task, return_exceptions=True)
 
+            exit_code = proc.returncode if proc.returncode is not None else 1
             await self._send(websocket, {
                 "type": "exit",
-                "return_code": proc.returncode if proc.returncode is not None else 1,
+                "return_code": exit_code,
             })
+            return exit_code
 
         except Exception:
             if proc and proc.returncode is None:
                 proc.kill()
+            return 1
         finally:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)

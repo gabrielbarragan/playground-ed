@@ -366,6 +366,95 @@
         />
       </template><!-- end quizzes tab -->
 
+      <!-- ── Logros tab ──────────────────────────────────── -->
+      <template v-if="activeTab === 'achievements'">
+        <div class="tab-toolbar">
+          <span class="tab-toolbar-title">
+            Logros del Sandbox <span class="tab-count">{{ adminAchievements.length }}</span>
+          </span>
+          <div class="tab-toolbar-right">
+            <label class="toggle-label">
+              <input v-model="showInactiveAchievements" type="checkbox" class="toggle-check" @change="loadAchievements" />
+              <span class="toggle-text">Ver inactivos</span>
+            </label>
+            <button class="btn-secondary" style="background:#2a1f3d;border-color:#cba6f750;color:#cba6f7" @click="seedAchievements">
+              Cargar logros por defecto
+            </button>
+          </div>
+        </div>
+
+        <div class="courses-tab-layout">
+          <!-- Formulario -->
+          <div class="section course-form-card">
+            <h2 class="section-title">Nuevo logro</h2>
+            <form class="course-form" @submit.prevent="submitAchievement">
+              <label class="form-label">
+                Nombre
+                <input v-model="achForm.name" class="search-input" style="width:100%" placeholder="Ej: Maestro del bucle" required />
+              </label>
+              <label class="form-label">
+                Descripción
+                <input v-model="achForm.description" class="search-input" style="width:100%" placeholder="Texto al desbloquear" required />
+              </label>
+              <label class="form-label">
+                Icono (emoji)
+                <input v-model="achForm.icon" class="search-input" style="width:100%" placeholder="🏆" maxlength="8" />
+              </label>
+              <label class="form-label">
+                Tipo de trigger
+                <select v-model="achForm.trigger_type" class="search-input" style="width:100%">
+                  <option value="ast_concept">ast_concept</option>
+                  <option value="combo">combo</option>
+                </select>
+              </label>
+              <label class="form-label">
+                Trigger value
+                <input v-model="achForm.trigger_value" class="search-input" style="width:100%" placeholder="loop_while · list_comp · lambda+list_comp" required />
+              </label>
+              <label class="form-label">
+                Puntos bonus
+                <input v-model.number="achForm.points_bonus" type="number" min="0" class="search-input" style="width:100%" />
+              </label>
+              <p v-if="achError" style="color:#f38ba8;font-size:0.8rem;margin:0">{{ achError }}</p>
+              <button class="btn-primary" type="submit" :disabled="achSubmitting">
+                {{ achSubmitting ? 'Creando...' : '+ Crear logro' }}
+              </button>
+            </form>
+          </div>
+
+          <!-- Lista -->
+          <div class="section" style="flex:1">
+            <h2 class="section-title">Logros configurados</h2>
+            <div v-if="loadingAchievements" class="table-loading"><span class="spinner" /> Cargando...</div>
+            <ul v-else class="course-manage-list">
+              <li v-for="a in adminAchievements" :key="a.id" class="course-manage-item">
+                <div class="course-manage-info">
+                  <span style="font-size:1.3rem;flex-shrink:0">{{ a.icon }}</span>
+                  <div style="display:flex;flex-direction:column;gap:0.1rem;min-width:0">
+                    <span class="course-code">{{ a.name }}</span>
+                    <span class="course-name" style="font-size:0.72rem;color:#6c7086">{{ a.trigger_type }} · {{ a.trigger_value }} · +{{ a.points_bonus }} pts</span>
+                    <span class="course-manage-desc">{{ a.description }}</span>
+                  </div>
+                </div>
+                <div class="course-manage-actions">
+                  <span class="status-badge" :class="a.is_active ? 'status--active' : 'status--inactive'">
+                    {{ a.is_active ? 'Activo' : 'Inactivo' }}
+                  </span>
+                  <button
+                    class="btn-action"
+                    :class="a.is_active ? 'btn-action--deactivate' : 'btn-action--activate'"
+                    @click="toggleAchievement(a)"
+                  >
+                    {{ a.is_active ? 'Desactivar' : 'Activar' }}
+                  </button>
+                </div>
+              </li>
+              <li v-if="!adminAchievements.length" class="table-empty">Sin logros aún. Usa "Cargar logros por defecto".</li>
+            </ul>
+          </div>
+        </div>
+      </template><!-- end achievements tab -->
+
     </main>
 
     <!-- Modals -->
@@ -398,6 +487,7 @@ import QuizFormModal from './components/QuizFormModal.vue'
 import QuizResultsPanel from './components/QuizResultsPanel.vue'
 import { quizzesApi } from '@/api/quizzesApi'
 import type { Quiz } from '@/types/quizzes'
+import { achievementsApi, type SandboxAchievement } from '@/api/achievementsApi'
 
 const auth = useAuthStore()
 
@@ -407,6 +497,7 @@ const TABS = [
   { id: 'challenges', label: 'Retos' },
   { id: 'submissions', label: 'Revisiones' },
   { id: 'quizzes', label: 'Evaluaciones' },
+  { id: 'achievements', label: '🏆 Logros' },
 ]
 const activeTab = ref('users')
 
@@ -618,8 +709,50 @@ async function toggleQuizActive(q: Quiz) {
   if (idx >= 0) quizzes.value[idx] = updated
 }
 
+// ── Achievements ─────────────────────────────────────────────
+const adminAchievements = ref<SandboxAchievement[]>([])
+const loadingAchievements = ref(false)
+const achForm = ref({ name: '', description: '', icon: '🏆', trigger_type: 'ast_concept', trigger_value: '', points_bonus: 0 })
+const achSubmitting = ref(false)
+const achError = ref('')
+const showInactiveAchievements = ref(false)
+
+async function loadAchievements() {
+  loadingAchievements.value = true
+  try {
+    adminAchievements.value = await achievementsApi.adminList(showInactiveAchievements.value)
+  } finally {
+    loadingAchievements.value = false
+  }
+}
+
+async function submitAchievement() {
+  achError.value = ''
+  achSubmitting.value = true
+  try {
+    const created = await achievementsApi.adminCreate({ ...achForm.value })
+    adminAchievements.value.unshift(created)
+    achForm.value = { name: '', description: '', icon: '🏆', trigger_type: 'ast_concept', trigger_value: '', points_bonus: 0 }
+  } catch (e: any) {
+    achError.value = e?.response?.data?.detail ?? 'Error al crear logro'
+  } finally {
+    achSubmitting.value = false
+  }
+}
+
+async function toggleAchievement(a: SandboxAchievement) {
+  const updated = await achievementsApi.adminUpdate(a.id, { is_active: !a.is_active })
+  const idx = adminAchievements.value.findIndex(x => x.id === a.id)
+  if (idx !== -1) adminAchievements.value[idx] = updated
+}
+
+async function seedAchievements() {
+  const res = await achievementsApi.adminSeed()
+  if (res.created > 0) await loadAchievements()
+}
+
 onMounted(async () => {
-  const [statsRes] = await Promise.all([adminApi.getStats(), loadUsers(), loadChallenges(), loadCourses(), loadQuizzes()])
+  const [statsRes] = await Promise.all([adminApi.getStats(), loadUsers(), loadChallenges(), loadCourses(), loadQuizzes(), loadAchievements()])
   stats.value = statsRes
   loadingStats.value = false
 })
