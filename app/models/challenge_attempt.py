@@ -40,6 +40,8 @@ class ChallengeAttempt(Document):
     attempt_number = IntField(default=1)
     # Puntos acreditados en este intento (decrece con cada reintento)
     points_earned = IntField(default=0)
+    # Puntos bonus por eficiencia de líneas (0 si no aplica o no ganó el bono)
+    bonus_points_earned = IntField(default=0)
     submitted_at = DateTimeField(default=datetime.utcnow)
 
     # Revisión manual (None = no aplica / auto-graded)

@@ -22,6 +22,9 @@ export interface Challenge {
   test_case_count: number
   has_auto_grading: boolean
   is_active: boolean
+  optimal_lines_min: number | null
+  optimal_lines_max: number | null
+  lines_bonus_points: number
   created_at: string
   updated_at: string
 }
@@ -52,6 +55,8 @@ export interface Attempt {
   attempt_number: number
   passed: boolean
   points_earned: number
+  bonus_points_earned: number
+  effective_lines: number
   review_status: 'pending' | 'approved' | 'rejected' | null
   review_feedback: string
   reviewer: { id: string; first_name: string; last_name: string } | null

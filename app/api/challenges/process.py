@@ -4,6 +4,7 @@ from typing import Optional
 from app.api.challenges.querysets import ChallengeQueryset, AttemptQueryset
 from app.api.courses.querysets import CourseQueryset
 from app.api.users.querysets import UserQueryset
+from app.core.code_quality import calculate_lines_bonus, count_effective_lines
 from app.models.challenge import Challenge, TestCase
 from app.models.challenge_attempt import ChallengeAttempt, TestCaseResult
 
@@ -54,6 +55,9 @@ def _serialize_challenge(challenge: Challenge, admin_view: bool = True) -> dict:
         "test_case_count": len(challenge.test_cases),
         "has_auto_grading": len(challenge.test_cases) > 0,
         "is_active": challenge.is_active,
+        "optimal_lines_min": challenge.optimal_lines_min,
+        "optimal_lines_max": challenge.optimal_lines_max,
+        "lines_bonus_points": challenge.lines_bonus_points,
         "created_at": challenge.created_at.isoformat(),
         "updated_at": challenge.updated_at.isoformat(),
     }
@@ -85,6 +89,8 @@ def _serialize_attempt(attempt) -> dict:
         "attempt_number": attempt.attempt_number,
         "passed": attempt.passed,
         "points_earned": attempt.points_earned,
+        "bonus_points_earned": attempt.bonus_points_earned,
+        "effective_lines": count_effective_lines(attempt.code),
         "review_status": attempt.review_status,
         "review_feedback": attempt.review_feedback,
         "reviewer": reviewer,
@@ -133,6 +139,9 @@ def create_challenge(
     example_output: str,
     tags: list[str],
     requires_review: bool,
+    optimal_lines_min: Optional[int] = None,
+    optimal_lines_max: Optional[int] = None,
+    lines_bonus_points: int = 0,
 ) -> dict:
     courses = []
     for cid in course_ids:
@@ -152,6 +161,9 @@ def create_challenge(
         example_output=example_output,
         tags=tags,
         requires_review=requires_review,
+        optimal_lines_min=optimal_lines_min,
+        optimal_lines_max=optimal_lines_max,
+        lines_bonus_points=lines_bonus_points,
     ).save()
     return _serialize_challenge(challenge)
 
@@ -383,6 +395,8 @@ async def submit_challenge(challenge_id: str, user_id: str, code: str) -> dict:
     points_earned = 0
     review_status = None
 
+    bonus_points_earned = 0
+
     if challenge.requires_review:
         review_status = "pending"
         passed_flag = False   # se confirma cuando el docente apruebe
@@ -390,7 +404,14 @@ async def submit_challenge(challenge_id: str, user_id: str, code: str) -> dict:
         passed_flag = all_passed
         if passed_flag and not already_passed:
             points_earned = _points_for_attempt(challenge.points, attempt_number)
-            user.total_points += points_earned
+            if challenge.lines_bonus_points and challenge.optimal_lines_min is not None:
+                bonus_points_earned = calculate_lines_bonus(
+                    code=code,
+                    min_lines=challenge.optimal_lines_min,
+                    max_lines=challenge.optimal_lines_max,
+                    bonus_points=challenge.lines_bonus_points,
+                )
+            user.total_points += points_earned + bonus_points_earned
             user.save()
 
     attempt = ChallengeAttempt(
@@ -401,6 +422,7 @@ async def submit_challenge(challenge_id: str, user_id: str, code: str) -> dict:
         passed=passed_flag,
         results=results,
         points_earned=points_earned,
+        bonus_points_earned=bonus_points_earned,
         review_status=review_status,
     ).save()
 
