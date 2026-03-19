@@ -82,6 +82,29 @@
               <input v-model="tagsInput" class="field-input" placeholder="bucles, listas, strings" />
             </div>
 
+            <div class="field field--full">
+              <label class="field-label">
+                Funciones requeridas
+                <span class="field-hint">(el alumno debe definirlas con def)</span>
+              </label>
+              <div class="fn-chips-wrap">
+                <span
+                  v-for="fn in form.required_functions" :key="fn"
+                  class="fn-chip"
+                >
+                  <code>{{ fn }}</code>
+                  <button class="fn-chip-remove" type="button" @click="removeFn(fn)">✕</button>
+                </span>
+                <input
+                  v-model="fnInput"
+                  class="fn-chip-input"
+                  placeholder="nombre_funcion + Enter"
+                  @keydown.enter.prevent="addFn"
+                  @keydown.tab.prevent="addFn"
+                />
+              </div>
+            </div>
+
             <div class="field field--center">
               <label class="toggle-row">
                 <input type="checkbox" v-model="form.requires_review" class="toggle-check" />
@@ -256,11 +279,25 @@ const form = ref({
   example_input: '',
   example_output: '',
   requires_review: false,
+  required_functions: [] as string[],
   optimal_lines_min: null as number | null,
   optimal_lines_max: null as number | null,
   lines_bonus_points: 0,
 })
 const tagsInput = ref('')
+const fnInput = ref('')
+
+function addFn() {
+  const name = fnInput.value.trim().replace(/[^a-zA-Z0-9_]/g, '')
+  if (name && !form.value.required_functions.includes(name)) {
+    form.value.required_functions.push(name)
+  }
+  fnInput.value = ''
+}
+
+function removeFn(name: string) {
+  form.value.required_functions = form.value.required_functions.filter(f => f !== name)
+}
 const bonusEnabled = ref(false)
 
 const bonusValid = computed(() =>
@@ -296,6 +333,7 @@ watch(() => props.challenge, (c) => {
       example_input: c.example_input,
       example_output: c.example_output,
       requires_review: c.requires_review,
+      required_functions: [...(c.required_functions ?? [])],
       optimal_lines_min: c.optimal_lines_min,
       optimal_lines_max: c.optimal_lines_max,
       lines_bonus_points: c.lines_bonus_points,
@@ -560,6 +598,63 @@ select.field-input { cursor: pointer; }
 }
 .spinner--sm { width: 11px; height: 11px; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Funciones requeridas chips ───────────────────────── */
+.fn-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.35rem 0.5rem;
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 6px;
+  min-height: 36px;
+  transition: border-color 0.15s;
+  cursor: text;
+}
+.fn-chips-wrap:focus-within { border-color: #cba6f7; }
+
+.fn-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #2a1f3d;
+  border: 1px solid #cba6f750;
+  border-radius: 4px;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.75rem;
+  color: #cba6f7;
+}
+.fn-chip code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #cba6f7;
+}
+.fn-chip-remove {
+  background: none;
+  border: none;
+  color: #cba6f780;
+  cursor: pointer;
+  font-size: 0.65rem;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.1s;
+}
+.fn-chip-remove:hover { color: #f38ba8; }
+
+.fn-chip-input {
+  flex: 1;
+  min-width: 140px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #cdd6f4;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  padding: 0.1rem 0.2rem;
+}
+.fn-chip-input::placeholder { color: #45475a; }
 
 /* ── Bonus de líneas ──────────────────────────────────── */
 .bonus-section {

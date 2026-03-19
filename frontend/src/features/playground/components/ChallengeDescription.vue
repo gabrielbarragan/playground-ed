@@ -8,6 +8,13 @@
         </span>
         <span class="ch-pts">{{ challenge.points }} pts base</span>
         <span v-if="challenge.requires_review" class="ch-review-tag">Revisión manual</span>
+        <span
+          v-if="challenge.required_functions?.length"
+          class="ch-fn-tag"
+          :title="'Funciones requeridas: ' + challenge.required_functions.join(', ')"
+        >
+          def {{ challenge.required_functions.join(', ') }}
+        </span>
       </div>
       <h2 class="ch-title">{{ challenge.title }}</h2>
       <div v-if="challenge.courses?.length" class="ch-courses">
@@ -39,8 +46,14 @@
         <span v-for="tag in challenge.tags" :key="tag" class="ch-tag">{{ tag }}</span>
       </div>
 
+      <!-- Error de validación AST (funciones no definidas) -->
+      <div v-if="lastAttempt?.ast_validation_error" class="ch-ast-error">
+        <span class="ch-ast-icon">⚠️</span>
+        <span class="ch-ast-msg">{{ lastAttempt.ast_validation_error }}</span>
+      </div>
+
       <!-- Last attempt result -->
-      <div v-if="lastAttempt" class="ch-attempt-result" :class="attemptClass">
+      <div v-if="lastAttempt && !lastAttempt.ast_validation_error" class="ch-attempt-result" :class="attemptClass">
         <div class="ch-attempt-header">
           <span class="ch-attempt-icon">{{ attemptIcon }}</span>
           <span class="ch-attempt-title">{{ attemptTitle }}</span>
@@ -499,6 +512,38 @@ const attemptTitle = computed(() => {
   font-size: 0.75rem;
   color: #fab387;
   font-style: italic;
+}
+
+/* ── Funciones requeridas ─────────────────────────────── */
+.ch-fn-tag {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  background: #1e2535;
+  color: #89b4fa;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  border: 1px solid #89b4fa30;
+}
+
+/* ── Error AST ────────────────────────────────────────── */
+.ch-ast-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  background: #2a1a1a;
+  border: 1px solid #f38ba840;
+  font-size: 0.78rem;
+}
+
+.ch-ast-icon { flex-shrink: 0; font-size: 0.9rem; }
+
+.ch-ast-msg {
+  color: #f38ba8;
+  line-height: 1.5;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 /* ── Bonus de líneas ──────────────────────────────────── */

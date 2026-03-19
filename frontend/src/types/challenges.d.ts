@@ -17,6 +17,7 @@ export interface Challenge {
   example_input: string
   example_output: string
   requires_review: boolean
+  required_functions: string[]
   tags: string[]
   test_cases: TestCase[]
   test_case_count: number
@@ -57,6 +58,7 @@ export interface Attempt {
   points_earned: number
   bonus_points_earned: number
   effective_lines: number
+  ast_validation_error: string
   review_status: 'pending' | 'approved' | 'rejected' | null
   review_feedback: string
   reviewer: { id: string; first_name: string; last_name: string } | null

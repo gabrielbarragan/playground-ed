@@ -10,6 +10,7 @@ class ChallengeHandler:
         title, description, difficulty, points,
         course_ids, starter_code, example_input, example_output,
         tags, requires_review,
+        required_functions=None,
         optimal_lines_min=None, optimal_lines_max=None, lines_bonus_points=0,
     ) -> dict:
         return process.create_challenge(
@@ -17,6 +18,7 @@ class ChallengeHandler:
             points=points, course_ids=course_ids, starter_code=starter_code,
             example_input=example_input, example_output=example_output,
             tags=tags, requires_review=requires_review,
+            required_functions=required_functions,
             optimal_lines_min=optimal_lines_min,
             optimal_lines_max=optimal_lines_max,
             lines_bonus_points=lines_bonus_points,

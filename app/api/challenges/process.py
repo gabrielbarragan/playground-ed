@@ -4,6 +4,7 @@ from typing import Optional
 from app.api.challenges.querysets import ChallengeQueryset, AttemptQueryset
 from app.api.courses.querysets import CourseQueryset
 from app.api.users.querysets import UserQueryset
+from app.core.ast_analyzer import check_required_functions
 from app.core.code_quality import calculate_lines_bonus, count_effective_lines
 from app.models.challenge import Challenge, TestCase
 from app.models.challenge_attempt import ChallengeAttempt, TestCaseResult
@@ -50,6 +51,7 @@ def _serialize_challenge(challenge: Challenge, admin_view: bool = True) -> dict:
         "example_input": challenge.example_input,
         "example_output": challenge.example_output,
         "requires_review": challenge.requires_review,
+        "required_functions": list(challenge.required_functions or []),
         "tags": challenge.tags,
         "test_cases": test_cases,
         "test_case_count": len(challenge.test_cases),
@@ -91,6 +93,7 @@ def _serialize_attempt(attempt) -> dict:
         "points_earned": attempt.points_earned,
         "bonus_points_earned": attempt.bonus_points_earned,
         "effective_lines": count_effective_lines(attempt.code),
+        "ast_validation_error": attempt.ast_validation_error or "",
         "review_status": attempt.review_status,
         "review_feedback": attempt.review_feedback,
         "reviewer": reviewer,
@@ -139,6 +142,7 @@ def create_challenge(
     example_output: str,
     tags: list[str],
     requires_review: bool,
+    required_functions: list[str] = None,
     optimal_lines_min: Optional[int] = None,
     optimal_lines_max: Optional[int] = None,
     lines_bonus_points: int = 0,
@@ -161,6 +165,7 @@ def create_challenge(
         example_output=example_output,
         tags=tags,
         requires_review=requires_review,
+        required_functions=required_functions or [],
         optimal_lines_min=optimal_lines_min,
         optimal_lines_max=optimal_lines_max,
         lines_bonus_points=lines_bonus_points,
@@ -366,6 +371,24 @@ async def submit_challenge(challenge_id: str, user_id: str, code: str) -> dict:
     course_ids = [str(c.id) for c in challenge.courses]
     if course_ids and str(user.course.id) not in course_ids:
         raise ValueError("Reto no disponible para tu curso")
+
+    # ── Validación AST: funciones requeridas ───────────────────────────────────
+    ast_error = check_required_functions(code, list(challenge.required_functions or []))
+    if ast_error:
+        attempt_number = _attempts.count_attempts(user, challenge) + 1
+        attempt = ChallengeAttempt(
+            user=user,
+            challenge=challenge,
+            code=code,
+            attempt_number=attempt_number,
+            passed=False,
+            results=[],
+            points_earned=0,
+            bonus_points_earned=0,
+            ast_validation_error=ast_error,
+            review_status=None,
+        ).save()
+        return _serialize_attempt(attempt)
 
     # ── Ejecutar contra test cases ─────────────────────────────────────────────
     results = []
