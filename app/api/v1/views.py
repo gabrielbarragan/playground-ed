@@ -8,6 +8,7 @@ from app.core.handlers import CodeExecutorHandler
 from app.core.process import InteractiveExecutor
 from app.api.v1.serializer import CodeExecutionInSerializer
 from app.api.dashboard.handler import ActivityHandler
+from app.api.sandbox_achievements.handler import AchievementHandler
 
 router = APIRouter()
 
@@ -32,6 +33,12 @@ async def run_code(
         code=request.code,
         success=success,
     )
+
+    if success and ctx:
+        new_achievements = AchievementHandler.unlock_for_run(ctx.id, request.code)
+        response["new_achievements"] = new_achievements
+    else:
+        response["new_achievements"] = []
 
     return JSONResponse(content=response, status_code=200)
 
@@ -67,7 +74,15 @@ async def ws_run(
         code = msg["code"]
         ActivityHandler.log_execution(user_id=user_id, code=code, success=True)
 
-        await InteractiveExecutor().run(code, websocket)
+        exit_code = await InteractiveExecutor().run(code, websocket)
+
+        if user_id and exit_code == 0:
+            new_achievements = AchievementHandler.unlock_for_run(user_id, code)
+            for ach in new_achievements:
+                try:
+                    await websocket.send_json({"type": "achievement", "data": ach["achievement"]})
+                except Exception:
+                    pass
 
     except WebSocketDisconnect:
         pass

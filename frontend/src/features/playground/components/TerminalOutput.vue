@@ -1,5 +1,24 @@
 <template>
   <div class="terminal-wrapper">
+    <!-- Achievement toasts -->
+    <div class="achievement-toasts">
+      <transition-group name="toast">
+        <div
+          v-for="toast in toasts"
+          :key="toast.id"
+          class="achievement-toast"
+        >
+          <span class="toast-icon">{{ toast.icon }}</span>
+          <div class="toast-body">
+            <span class="toast-title">¡Logro desbloqueado!</span>
+            <span class="toast-name">{{ toast.name }}</span>
+            <span class="toast-desc">{{ toast.description }}</span>
+            <span v-if="toast.points_bonus > 0" class="toast-pts">+{{ toast.points_bonus }} pts</span>
+          </div>
+        </div>
+      </transition-group>
+    </div>
+
     <div class="terminal-pane-header">
       <span class="pane-label">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -20,7 +39,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { usePlaygroundStore } from '@/stores/usePlaygroundStore'
-import type { ExecutionStatus, WsServerMessage } from '@/types/playground'
+import type { ExecutionStatus, WsServerMessage, AchievementData } from '@/types/playground'
 
 // ── Props para el badge de estado ─────────────────────────
 const props = defineProps<{ status: ExecutionStatus }>()
@@ -44,6 +63,21 @@ const statusClass = computed(() => ({
   'badge--error':   props.status === 'error' || props.status === 'timeout',
   'badge--down':    props.status === 'server_down',
 }))
+
+// ── Achievement toasts ────────────────────────────────────
+interface AchievementToast extends AchievementData { id: number }
+const toasts = ref<AchievementToast[]>([])
+let _toastId = 0
+
+function showAchievementToast(data: AchievementData, delay = 0) {
+  setTimeout(() => {
+    const id = ++_toastId
+    toasts.value.push({ ...data, id })
+    setTimeout(() => {
+      toasts.value = toasts.value.filter(t => t.id !== id)
+    }, 4500)
+  }, delay)
+}
 
 // ── Terminal setup ────────────────────────────────────────
 const store = usePlaygroundStore()
@@ -106,6 +140,10 @@ function handleWsMessage(msg: WsServerMessage) {
     case 'error':
       isAcceptingInput = false
       terminal.writeln(`${A.red}${msg.message}${A.reset}`)
+      break
+
+    case 'achievement':
+      showAchievementToast(msg.data)
       break
   }
 }
@@ -228,6 +266,7 @@ onMounted(() => {
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  position: relative;
 }
 
 .terminal-pane-header {
@@ -278,5 +317,85 @@ onMounted(() => {
   padding: 0.5rem 0.25rem;
   background: #1e1e2e;
   overflow: hidden;
+}
+
+/* ── Achievement toasts ─────────────────────────────────── */
+.achievement-toasts {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.achievement-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: #181825;
+  border: 1px solid #cba6f7;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  min-width: 240px;
+  max-width: 300px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.toast-icon {
+  font-size: 1.75rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.toast-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.toast-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #cba6f7;
+}
+
+.toast-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #cdd6f4;
+}
+
+.toast-desc {
+  font-size: 0.75rem;
+  color: #6c7086;
+  line-height: 1.3;
+}
+
+.toast-pts {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #a6e3a1;
+  margin-top: 0.1rem;
+}
+
+/* Transition */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.35s ease;
+}
+
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(40px);
+}
+
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(40px);
 }
 </style>

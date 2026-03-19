@@ -49,7 +49,6 @@
           <RouterLink v-if="auth.isAdmin" to="/admin" class="btn-header-link">Docente</RouterLink>
           <RouterLink v-if="auth.isSuperAdmin" to="/superadmin" class="btn-header-link">Superadmin</RouterLink>
           <RouterLink to="/quizzes" class="btn-header-link">Evaluaciones</RouterLink>
-          <RouterLink v-if="auth.isAdmin" to="/admin" class="btn-header-link">Admin</RouterLink>
           <button class="btn-logout" @click="handleLogout">Salir</button>
         </div>
       </div>
@@ -142,6 +141,13 @@
               <span v-if="challengeStore.activeChallenge" class="active-dot" />
             </button>
             <button
+              class="btn-secondary"
+              @click="showAchievementsPanel = true"
+              title="Ver mis logros del sandbox"
+            >
+              🏆 Logros
+            </button>
+            <button
               v-if="challengeStore.activeChallenge"
               class="btn-submit"
               :disabled="challengeStore.submitting"
@@ -202,6 +208,11 @@
       @close="showSnippetsPanel = false"
       @load="handleSnippetLoad"
     />
+
+    <AchievementsPanel
+      v-if="showAchievementsPanel"
+      @close="showAchievementsPanel = false"
+    />
   </div>
 </template>
 
@@ -219,6 +230,7 @@ import SaveSnippetModal from './components/SaveSnippetModal.vue'
 import SnippetsPanel from './components/SnippetsPanel.vue'
 import ChallengesPanel from './components/ChallengesPanel.vue'
 import ChallengeDescription from './components/ChallengeDescription.vue'
+import AchievementsPanel from './components/AchievementsPanel.vue'
 
 const store = usePlaygroundStore()
 const auth = useAuthStore()
@@ -229,6 +241,7 @@ const router = useRouter()
 const showSaveModal = ref(false)
 const showSnippetsPanel = ref(false)
 const showChallengesPanel = ref(false)
+const showAchievementsPanel = ref(false)
 
 // ── Challenge mode ──────────────────────────────────────────
 const rightPaneRef = ref<HTMLElement | null>(null)
