@@ -42,6 +42,8 @@ class ChallengeAttempt(Document):
     points_earned = IntField(default=0)
     # Puntos bonus por eficiencia de líneas (0 si no aplica o no ganó el bono)
     bonus_points_earned = IntField(default=0)
+    # Error de validación AST (vacío si no aplica o si pasó la validación)
+    ast_validation_error = StringField(default="")
     submitted_at = DateTimeField(default=datetime.utcnow)
 
     # Revisión manual (None = no aplica / auto-graded)

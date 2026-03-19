@@ -37,6 +37,8 @@ class Challenge(Document):
     tags = ListField(StringField(max_length=50), default=list)
     # Si True, el docente debe aprobar manualmente el intento (incluso si hay test cases)
     requires_review = BooleanField(default=False)
+    # Funciones que el alumno debe definir obligatoriamente (validación AST)
+    required_functions = ListField(StringField(max_length=100), default=list)
     # Bono de líneas eficientes (None = desactivado para este reto)
     optimal_lines_min = IntField(null=True, default=None)
     optimal_lines_max = IntField(null=True, default=None)
