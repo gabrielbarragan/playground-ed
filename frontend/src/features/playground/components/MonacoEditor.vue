@@ -82,12 +82,15 @@ onMounted(() => {
 
   defineTheme()
 
-  // Bloquear click derecho y eventos de portapapeles en el contenedor DOM
+  // Bloquear click derecho, eventos de portapapeles y middle-click (X11 primary selection) en el contenedor DOM
   // capture:true para interceptar antes de que Monaco llame stopPropagation()
   containerRef.value.addEventListener('contextmenu', blockEvent, true)
   containerRef.value.addEventListener('copy', blockEvent, true)
   containerRef.value.addEventListener('cut', blockEvent, true)
   containerRef.value.addEventListener('paste', blockEvent, true)
+  containerRef.value.addEventListener('mousedown', (e: MouseEvent) => {
+    if (e.button === 1) e.preventDefault()  // bloquear middle-click paste (Linux X11)
+  }, true)
 
   editor = monaco.editor.create(containerRef.value, {
     value: props.modelValue,
@@ -115,6 +118,7 @@ onMounted(() => {
     },
     suggest: { preview: true },
     contextmenu: false,
+    middleClickPaste: false,
     overviewRulerLanes: 0,
     hideCursorInOverviewRuler: true,
     scrollbar: {
