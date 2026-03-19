@@ -88,6 +88,35 @@
                 <span class="toggle-text">Requiere revisión manual del docente</span>
               </label>
             </div>
+
+            <!-- Bono de líneas eficientes -->
+            <div class="field field--full bonus-section">
+              <label class="toggle-row">
+                <input type="checkbox" v-model="bonusEnabled" class="toggle-check" @change="onBonusToggle" />
+                <span class="toggle-text">Activar bono de líneas eficientes</span>
+              </label>
+              <div v-if="bonusEnabled" class="bonus-fields">
+                <div class="bonus-row">
+                  <label class="field-label">
+                    Líneas mínimas
+                    <input v-model.number="form.optimal_lines_min" type="number" min="1" class="field-input bonus-input" />
+                  </label>
+                  <label class="field-label">
+                    Líneas máximas
+                    <input v-model.number="form.optimal_lines_max" type="number" min="1" class="field-input bonus-input" />
+                  </label>
+                  <label class="field-label">
+                    Puntos bonus
+                    <input v-model.number="form.lines_bonus_points" type="number" min="1" class="field-input bonus-input" />
+                  </label>
+                </div>
+                <p class="bonus-hint">
+                  Se cuentan solo líneas con código (excluye vacías y comentarios #).
+                  <span v-if="bonusValid" class="bonus-valid">✓ Rango válido</span>
+                  <span v-else-if="form.optimal_lines_min && form.optimal_lines_max" class="bonus-invalid">El mínimo debe ser menor que el máximo</span>
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -198,7 +227,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, type Ref } from 'vue'
 import { challengesApi } from '@/api/challengesApi'
 import { coursesApi } from '@/api/coursesApi'
 import type { Challenge } from '@/types/challenges'
@@ -227,8 +256,28 @@ const form = ref({
   example_input: '',
   example_output: '',
   requires_review: false,
+  optimal_lines_min: null as number | null,
+  optimal_lines_max: null as number | null,
+  lines_bonus_points: 0,
 })
 const tagsInput = ref('')
+const bonusEnabled = ref(false)
+
+const bonusValid = computed(() =>
+  bonusEnabled.value &&
+  form.value.optimal_lines_min !== null &&
+  form.value.optimal_lines_max !== null &&
+  form.value.optimal_lines_min > 0 &&
+  form.value.optimal_lines_max > form.value.optimal_lines_min,
+)
+
+function onBonusToggle() {
+  if (!bonusEnabled.value) {
+    form.value.optimal_lines_min = null
+    form.value.optimal_lines_max = null
+    form.value.lines_bonus_points = 0
+  }
+}
 
 // Test cases pendientes (modo create)
 const pendingTcs = ref<object[]>([])
@@ -247,8 +296,12 @@ watch(() => props.challenge, (c) => {
       example_input: c.example_input,
       example_output: c.example_output,
       requires_review: c.requires_review,
+      optimal_lines_min: c.optimal_lines_min,
+      optimal_lines_max: c.optimal_lines_max,
+      lines_bonus_points: c.lines_bonus_points,
     }
     tagsInput.value = c.tags.join(', ')
+    bonusEnabled.value = c.lines_bonus_points > 0 && c.optimal_lines_min !== null
   }
 }, { immediate: true })
 
@@ -507,4 +560,46 @@ select.field-input { cursor: pointer; }
 }
 .spinner--sm { width: 11px; height: 11px; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Bonus de líneas ──────────────────────────────────── */
+.bonus-section {
+  border-top: 1px solid #313244;
+  padding-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.bonus-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #11111b;
+  border: 1px solid #313244;
+  border-radius: 6px;
+}
+
+.bonus-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.bonus-input {
+  width: 80px;
+}
+
+.bonus-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #6c7086;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.bonus-valid   { color: #a6e3a1; font-weight: 600; }
+.bonus-invalid { color: #f38ba8; font-weight: 600; }
 </style>

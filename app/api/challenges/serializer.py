@@ -13,6 +13,9 @@ class CreateChallengeSerializer(BaseModel):
     example_output: str = Field(default="")
     tags: list[str] = Field(default_factory=list)
     requires_review: bool = Field(default=False)
+    optimal_lines_min: Optional[int] = Field(default=None, ge=1)
+    optimal_lines_max: Optional[int] = Field(default=None, ge=1)
+    lines_bonus_points: int = Field(default=0, ge=0)
 
 
 class UpdateChallengeSerializer(BaseModel):
@@ -27,6 +30,9 @@ class UpdateChallengeSerializer(BaseModel):
     tags: Optional[list[str]] = None
     requires_review: Optional[bool] = None
     is_active: Optional[bool] = None
+    optimal_lines_min: Optional[int] = Field(default=None, ge=1)
+    optimal_lines_max: Optional[int] = Field(default=None, ge=1)
+    lines_bonus_points: Optional[int] = Field(default=None, ge=0)
 
 
 class AddTestCaseSerializer(BaseModel):

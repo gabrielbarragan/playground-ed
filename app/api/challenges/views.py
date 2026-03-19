@@ -37,6 +37,9 @@ async def create_challenge(
             example_output=body.example_output,
             tags=body.tags,
             requires_review=body.requires_review,
+            optimal_lines_min=body.optimal_lines_min,
+            optimal_lines_max=body.optimal_lines_max,
+            lines_bonus_points=body.lines_bonus_points,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
