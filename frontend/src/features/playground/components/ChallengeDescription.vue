@@ -49,6 +49,24 @@
           </span>
         </div>
 
+        <!-- Feedback de bono de líneas -->
+        <div v-if="challenge.lines_bonus_points && lastAttempt.passed" class="ch-bonus-row">
+          <template v-if="lastAttempt.bonus_points_earned > 0">
+            <span class="ch-bonus-icon">🎯</span>
+            <span class="ch-bonus-text">
+              Bono de eficiencia: <strong>+{{ lastAttempt.bonus_points_earned }} pts</strong>
+              — {{ lastAttempt.effective_lines }} líneas (rango óptimo: {{ challenge.optimal_lines_min }}–{{ challenge.optimal_lines_max }})
+            </span>
+          </template>
+          <template v-else>
+            <span class="ch-bonus-icon">💡</span>
+            <span class="ch-bonus-text ch-bonus-text--miss">
+              Tu solución tiene {{ lastAttempt.effective_lines }} línea{{ lastAttempt.effective_lines !== 1 ? 's' : '' }}.
+              El rango óptimo es {{ challenge.optimal_lines_min }}–{{ challenge.optimal_lines_max }} — sin bono esta vez.
+            </span>
+          </template>
+        </div>
+
         <!-- Test case results -->
         <div v-if="lastAttempt.results?.length" class="ch-tc-results">
           <div
@@ -481,5 +499,32 @@ const attemptTitle = computed(() => {
   font-size: 0.75rem;
   color: #fab387;
   font-style: italic;
+}
+
+/* ── Bonus de líneas ──────────────────────────────────── */
+.ch-bonus-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  background: #1e2a1e;
+  border: 1px solid #a6e3a125;
+  font-size: 0.75rem;
+}
+
+.ch-bonus-icon { flex-shrink: 0; font-size: 0.8rem; }
+
+.ch-bonus-text { color: #a6e3a1; line-height: 1.4; }
+.ch-bonus-text strong { color: #a6e3a1; }
+
+.ch-bonus-text--miss {
+  color: #6c7086;
+  background: transparent;
+}
+
+.ch-bonus-row:has(.ch-bonus-text--miss) {
+  background: #1e1e2e;
+  border-color: #313244;
 }
 </style>
