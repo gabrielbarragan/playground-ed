@@ -100,6 +100,33 @@
         </div>
       </section>
 
+      <!-- Logros recientes -->
+      <section v-if="achievements && achievements.earned_count > 0" class="section">
+        <div class="section-header">
+          <h2 class="section-title">Logros del Sandbox</h2>
+          <span class="section-badge">{{ achievements.earned_count }} / {{ achievements.total }}</span>
+        </div>
+        <div class="ach-recent">
+          <div
+            v-for="ua in achievements.earned.slice(0, 3)"
+            :key="ua.id"
+            class="ach-recent-item"
+          >
+            <span class="ach-recent-icon">{{ ua.achievement.icon }}</span>
+            <div class="ach-recent-info">
+              <span class="ach-recent-name">{{ ua.achievement.name }}</span>
+              <span class="ach-recent-desc">{{ ua.achievement.description }}</span>
+            </div>
+            <span v-if="ua.achievement.points_bonus > 0" class="ach-recent-pts">
+              +{{ ua.achievement.points_bonus }}
+            </span>
+          </div>
+        </div>
+        <RouterLink v-if="achievements.earned_count > 3" to="/" class="ach-see-all">
+          Ver todos los logros en el Playground →
+        </RouterLink>
+      </section>
+
       <!-- Ranking -->
       <section v-if="ranking" class="section">
         <div class="section-header">
@@ -145,14 +172,17 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import AppFooter from '@/components/AppFooter.vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { dashboardApi, type HeatmapResponse, type RankingResponse, type ActivityDay } from '@/api/dashboardApi'
+import { achievementsApi, type MyAchievementsResponse } from '@/api/achievementsApi'
 
 const auth = useAuthStore()
 const loading = ref(true)
 const activity = ref<HeatmapResponse | null>(null)
 const ranking = ref<RankingResponse | null>(null)
+const achievements = ref<MyAchievementsResponse | null>(null)
 const tooltip = ref<ActivityDay | null>(null)
 const legendLevels = [0, 1, 2, 3, 4]
 
@@ -206,13 +236,15 @@ function podiumIcon(rank: number): string {
 onMounted(async () => {
   try {
     const courseId = auth.user?.course.id
-    const [act, rank] = await Promise.all([
+    const [act, rank, ach] = await Promise.all([
       dashboardApi.myActivity(),
       courseId ? dashboardApi.courseRanking(courseId) : Promise.resolve(null),
+      achievementsApi.myAchievements().catch(() => null),
       auth.fetchMe(),
     ])
     activity.value = act
     ranking.value = rank
+    achievements.value = ach
   } finally {
     loading.value = false
   }
@@ -561,6 +593,68 @@ onMounted(async () => {
   text-align: center;
   padding: 1rem;
 }
+
+/* ── Logros recientes ──────────────────────────────────── */
+.ach-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ach-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #1e1e2e;
+  border-radius: 8px;
+}
+
+.ach-recent-icon {
+  font-size: 1.35rem;
+  flex-shrink: 0;
+}
+
+.ach-recent-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.ach-recent-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #cdd6f4;
+}
+
+.ach-recent-desc {
+  font-size: 0.72rem;
+  color: #6c7086;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ach-recent-pts {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #a6e3a1;
+  flex-shrink: 0;
+}
+
+.ach-see-all {
+  display: block;
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: #cba6f7;
+  text-decoration: none;
+  text-align: right;
+  transition: opacity 0.15s;
+}
+
+.ach-see-all:hover { opacity: 0.8; }
 
 /* ── Animations ────────────────────────────────────────── */
 @keyframes spin { to { transform: rotate(360deg); } }

@@ -6,10 +6,19 @@ export interface CodeExecutionRequest {
   code: string
 }
 
+export interface AchievementData {
+  id: string
+  name: string
+  description: string
+  icon: string
+  points_bonus: number
+}
+
 export interface ExecutionResult {
   stdout: string
   stderr: string
   return_code: 0 | 1
+  new_achievements?: AchievementData[]
 }
 
 export interface ExecutionErrorResponse {
@@ -28,11 +37,12 @@ export type WsClientMessage =
 
 // Servidor → Cliente
 export type WsServerMessage =
-  | { type: 'stdout';  data: string }
-  | { type: 'stderr';  data: string }
-  | { type: 'exit';    return_code: 0 | 1 }
+  | { type: 'stdout';      data: string }
+  | { type: 'stderr';      data: string }
+  | { type: 'exit';        return_code: 0 | 1 }
   | { type: 'timeout' }
-  | { type: 'error';   message: string }
+  | { type: 'error';       message: string }
+  | { type: 'achievement'; data: AchievementData }
 
 // ============================================================
 // META ENDPOINTS
