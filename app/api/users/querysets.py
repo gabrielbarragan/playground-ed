@@ -26,3 +26,37 @@ class UserQueryset(BaseQueryset):
         user.total_points += points
         user.save()
         return user
+
+    # ── Password reset ──────────────────────────────────────
+
+    def set_reset_token(self, user: User, token_hash: str) -> None:
+        user.reset_token_hash = token_hash
+        user.save()
+
+    def clear_reset_token(self, user: User) -> None:
+        user.reset_token_hash = None
+        user.save()
+
+    def update_password(self, user: User, new_hash: str) -> None:
+        user.password_hash = new_hash
+        user.reset_token_hash = None
+        user.save()
+
+    def get_by_reset_token_hash(self, token_hash: str) -> Optional[User]:
+        return self.model.objects(reset_token_hash=token_hash, is_active=True).first()
+
+    # ── Email change ────────────────────────────────────────
+
+    def set_pending_email(self, user: User, new_email: str, token_hash: str) -> None:
+        user.pending_email = new_email
+        user.email_change_token_hash = token_hash
+        user.save()
+
+    def confirm_email_change(self, user: User) -> None:
+        user.email = user.pending_email
+        user.pending_email = None
+        user.email_change_token_hash = None
+        user.save()
+
+    def get_by_email_change_token_hash(self, token_hash: str) -> Optional[User]:
+        return self.model.objects(email_change_token_hash=token_hash, is_active=True).first()

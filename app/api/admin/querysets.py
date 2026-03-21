@@ -26,3 +26,12 @@ class AdminUserQueryset(BaseQueryset):
 
     def count_inactive(self) -> int:
         return self.model.objects(is_active=False, is_admin=False).count()
+
+    def get_by_email(self, email: str):
+        return self.model.objects(email=email).first()
+
+    def update_email(self, user, new_email: str) -> None:
+        user.email = new_email
+        user.pending_email = None
+        user.email_change_token_hash = None
+        user.save()

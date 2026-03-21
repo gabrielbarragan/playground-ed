@@ -17,6 +17,29 @@ const router = createRouter({
       meta: { public: true },
     },
     {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: () => import('@/features/auth/ForgotPasswordView.vue'),
+      meta: { public: true },
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: () => import('@/features/auth/ResetPasswordView.vue'),
+      meta: { public: true },
+    },
+    {
+      path: '/confirm-email',
+      name: 'confirm-email',
+      component: () => import('@/features/auth/ConfirmEmailView.vue'),
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('@/features/profile/ProfileView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/',
       name: 'playground',
       component: () => import('@/features/playground/PlaygroundView.vue'),

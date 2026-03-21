@@ -1,12 +1,40 @@
-from datetime import datetime
+import hashlib
+from datetime import datetime, timedelta
 from typing import Optional
 
+from jose import JWTError, jwt
+
 from app.core.auth import hash_password, verify_password, create_access_token
+from app.core.constants import JWT_ALGORITHM, JWT_SECRET
 from app.api.users.querysets import UserQueryset
 from app.api.courses.querysets import CourseQueryset
 
 _users = UserQueryset()
 _courses = CourseQueryset()
+
+_RESET_EXPIRE_MINUTES = 15
+_EMAIL_CHANGE_EXPIRE_MINUTES = 30
+
+
+def _create_typed_token(user_id: str, token_type: str, expire_minutes: int) -> str:
+    expire = datetime.utcnow() + timedelta(minutes=expire_minutes)
+    payload = {"sub": user_id, "type": token_type, "exp": expire}
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _decode_typed_token(token: str, expected_type: str) -> Optional[str]:
+    """Retorna user_id si el token es válido y del tipo esperado, else None."""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        if payload.get("type") != expected_type:
+            return None
+        return payload.get("sub")
+    except JWTError:
+        return None
 
 
 def _serialize_user(user) -> dict:
@@ -91,3 +119,61 @@ def set_badge(user_id: str, emoji: str) -> dict:
         raise ValueError("Badge no válido")
     _users.update(user, badge=emoji)
     return _serialize_user(user)
+
+
+# ── Recuperación de contraseña ─────────────────────────────
+
+async def forgot_password_process(email: str) -> None:
+    """Genera token y envía email. Siempre retorna sin error (anti-enumeration)."""
+    from app.core.email import send_password_reset_email
+
+    user = _users.get_active_by_email(email)
+    if not user:
+        return  # silencioso
+
+    token = _create_typed_token(str(user.id), "password_reset", _RESET_EXPIRE_MINUTES)
+    _users.set_reset_token(user, _hash_token(token))
+    await send_password_reset_email(user.email, token)
+
+
+async def reset_password_process(token: str, new_password: str) -> None:
+    user_id = _decode_typed_token(token, "password_reset")
+    if not user_id:
+        raise ValueError("Token inválido o expirado")
+
+    token_hash = _hash_token(token)
+    user = _users.get_by_reset_token_hash(token_hash)
+    if not user or str(user.id) != user_id:
+        raise ValueError("Token inválido o ya utilizado")
+
+    _users.update_password(user, hash_password(new_password))
+
+
+# ── Cambio de email (estudiante) ───────────────────────────
+
+async def request_email_change_process(user_id: str, new_email: str) -> None:
+    from app.core.email import send_email_change_confirmation
+
+    if _users.get_by_email(new_email):
+        raise ValueError("El correo ya está en uso")
+
+    user = _users.get_active_by_id(user_id)
+    if not user:
+        raise ValueError("Usuario no encontrado")
+
+    token = _create_typed_token(user_id, "email_change", _EMAIL_CHANGE_EXPIRE_MINUTES)
+    _users.set_pending_email(user, new_email, _hash_token(token))
+    await send_email_change_confirmation(new_email, token)
+
+
+async def confirm_email_change_process(token: str) -> None:
+    user_id = _decode_typed_token(token, "email_change")
+    if not user_id:
+        raise ValueError("Token inválido o expirado")
+
+    token_hash = _hash_token(token)
+    user = _users.get_by_email_change_token_hash(token_hash)
+    if not user or str(user.id) != user_id:
+        raise ValueError("Token inválido o ya utilizado")
+
+    _users.confirm_email_change(user)

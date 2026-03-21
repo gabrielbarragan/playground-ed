@@ -104,6 +104,24 @@ def toggle_course(course_id: str) -> dict:
     }
 
 
+async def admin_change_email_process(user_id: str, new_email: str) -> dict:
+    from app.core.email import send_email_change_admin_notification
+
+    user = _users.get_by_id(user_id)
+    if not user:
+        raise ValueError("Usuario no encontrado")
+    if user.is_admin:
+        raise ValueError("No se puede modificar el email de un administrador")
+
+    if _users.get_by_email(new_email):
+        raise ValueError("El correo ya está en uso")
+
+    old_email = user.email
+    _users.update_email(user, new_email)
+    await send_email_change_admin_notification(old_email, new_email)
+    return _serialize_user(user)
+
+
 def get_global_stats() -> dict:
     today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     last_7_days_start = today - timedelta(days=6)

@@ -17,3 +17,16 @@ class UpdateProfileSerializer(BaseModel):
 
 class SetBadgeSerializer(BaseModel):
     emoji: str = Field(..., min_length=1, max_length=10)
+
+
+class ForgotPasswordSerializer(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordSerializer(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=6, max_length=128)
+
+
+class ChangeEmailSerializer(BaseModel):
+    new_email: EmailStr
