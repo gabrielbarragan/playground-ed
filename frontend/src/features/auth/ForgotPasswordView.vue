@@ -11,49 +11,48 @@
         <span class="auth-logo-text">FANAMA Playground</span>
       </div>
 
-      <h1 class="auth-title">Iniciar Sesión</h1>
+      <h1 class="auth-title">Recuperar contraseña</h1>
 
-      <form @submit.prevent="handleSubmit" novalidate>
-        <div class="form-group">
-          <label class="form-label">Correo electrónico</label>
-          <input
-            v-model="email"
-            type="email"
-            class="form-input"
-            :class="{ 'form-input--error': !!error }"
-            placeholder="usuario@ejemplo.com"
-            autocomplete="email"
-            required
-          />
-        </div>
+      <template v-if="!sent">
+        <p class="auth-subtitle">
+          Ingresá tu correo y te enviaremos un link para restablecer tu contraseña.
+        </p>
 
-        <div class="form-group">
-          <label class="form-label">Contraseña</label>
-          <input
-            v-model="password"
-            type="password"
-            class="form-input"
-            :class="{ 'form-input--error': !!error }"
-            placeholder="••••••••"
-            autocomplete="current-password"
-            required
-          />
-        </div>
+        <form @submit.prevent="handleSubmit" novalidate>
+          <div class="form-group">
+            <label class="form-label">Correo electrónico</label>
+            <input
+              v-model="email"
+              type="email"
+              class="form-input"
+              placeholder="usuario@ejemplo.com"
+              autocomplete="email"
+              required
+            />
+          </div>
 
-        <p v-if="error" class="form-error">{{ error }}</p>
+          <p v-if="error" class="form-error">{{ error }}</p>
 
-        <button type="submit" class="btn-submit" :disabled="loading">
-          <span v-if="loading" class="spinner" />
-          {{ loading ? 'Ingresando...' : 'Ingresar' }}
-        </button>
-      </form>
+          <button type="submit" class="btn-submit" :disabled="loading">
+            <span v-if="loading" class="spinner" />
+            {{ loading ? 'Enviando...' : 'Enviar link' }}
+          </button>
+        </form>
+      </template>
+
+      <div v-else class="success-box">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style="margin-bottom:0.75rem">
+          <circle cx="12" cy="12" r="10" stroke="#a6e3a1" stroke-width="2"/>
+          <path d="M8 12l3 3 5-5" stroke="#a6e3a1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="success-text">
+          Si el correo está registrado, recibirás un link en los próximos minutos.<br>
+          <small style="color:#6c7086">Revisá también la carpeta de spam.</small>
+        </p>
+      </div>
 
       <p class="auth-footer">
-        <RouterLink to="/forgot-password" class="auth-link">¿Olvidaste tu contraseña?</RouterLink>
-      </p>
-      <p class="auth-footer">
-        ¿No tenés cuenta?
-        <RouterLink to="/register" class="auth-link">Registrate</RouterLink>
+        <RouterLink to="/login" class="auth-link">← Volver al login</RouterLink>
       </p>
     </div>
     <AppFooter :fixed="true" />
@@ -63,27 +62,21 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import AppFooter from '@/components/AppFooter.vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/useAuthStore'
-
-const router = useRouter()
-const auth = useAuthStore()
+import { authApi } from '@/api/authApi'
 
 const email = ref('')
-const password = ref('')
 const loading = ref(false)
 const error = ref('')
+const sent = ref(false)
 
 async function handleSubmit() {
   error.value = ''
   loading.value = true
   try {
-    await auth.login({ email: email.value, password: password.value })
-    router.push('/')
-  } catch (e: any) {
-    error.value = e?.message?.includes('401') || e?.statusCode === 401
-      ? 'Correo o contraseña incorrectos'
-      : (e?.message ?? 'Error al iniciar sesión')
+    await authApi.forgotPassword(email.value)
+    sent.value = true
+  } catch {
+    error.value = 'Ocurrió un error. Intentá de nuevo.'
   } finally {
     loading.value = false
   }
@@ -126,7 +119,14 @@ async function handleSubmit() {
   font-size: 1.35rem;
   font-weight: 700;
   color: #cdd6f4;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.auth-subtitle {
+  font-size: 0.85rem;
+  color: #a6adc8;
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
 }
 
 .form-group {
@@ -156,14 +156,7 @@ async function handleSubmit() {
 }
 
 .form-input::placeholder { color: #45475a; }
-
-.form-input:focus {
-  border-color: #cba6f7;
-}
-
-.form-input--error {
-  border-color: #f38ba8;
-}
+.form-input:focus { border-color: #cba6f7; }
 
 .form-error {
   font-size: 0.78rem;
@@ -194,20 +187,9 @@ async function handleSubmit() {
   transition: background 0.15s, transform 0.1s;
 }
 
-.btn-submit:hover:not(:disabled) {
-  background: #d4b4ff;
-  transform: translateY(-1px);
-}
-
-.btn-submit:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.btn-submit:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
+.btn-submit:hover:not(:disabled) { background: #d4b4ff; transform: translateY(-1px); }
+.btn-submit:active:not(:disabled) { transform: translateY(0); }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 .spinner {
   width: 13px;
@@ -219,8 +201,20 @@ async function handleSubmit() {
   flex-shrink: 0;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.success-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1rem 0 0.5rem;
+}
+
+.success-text {
+  font-size: 0.88rem;
+  color: #a6adc8;
+  line-height: 1.6;
 }
 
 .auth-footer {
@@ -236,7 +230,5 @@ async function handleSubmit() {
   font-weight: 600;
 }
 
-.auth-link:hover {
-  text-decoration: underline;
-}
+.auth-link:hover { text-decoration: underline; }
 </style>

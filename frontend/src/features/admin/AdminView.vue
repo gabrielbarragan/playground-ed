@@ -275,7 +275,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="user in filteredUsers" :key="user.id" :class="{ 'row--inactive': !user.is_active }">
+              <template v-for="user in filteredUsers" :key="user.id">
+              <tr :class="{ 'row--inactive': !user.is_active }">
                 <td class="cell-name">
                   {{ user.first_name }} {{ user.last_name }}
                 </td>
@@ -297,17 +298,48 @@
                   </span>
                 </td>
                 <td>
-                  <button
-                    class="btn-action"
-                    :class="user.is_active ? 'btn-action--deactivate' : 'btn-action--activate'"
-                    :disabled="togglingId === user.id"
-                    @click="toggleUser(user)"
-                  >
-                    <span v-if="togglingId === user.id" class="spinner spinner--sm" />
-                    {{ user.is_active ? 'Desactivar' : 'Activar' }}
-                  </button>
+                  <div style="display:flex;flex-direction:column;gap:0.3rem;align-items:flex-start">
+                    <button
+                      class="btn-action"
+                      :class="user.is_active ? 'btn-action--deactivate' : 'btn-action--activate'"
+                      :disabled="togglingId === user.id"
+                      @click="toggleUser(user)"
+                    >
+                      <span v-if="togglingId === user.id" class="spinner spinner--sm" />
+                      {{ user.is_active ? 'Desactivar' : 'Activar' }}
+                    </button>
+                    <button
+                      class="btn-action btn-action--email"
+                      @click="startEmailEdit(user)"
+                    >
+                      ✉ Email
+                    </button>
+                  </div>
                 </td>
               </tr>
+              <!-- Inline email edit row -->
+              <tr v-if="emailEditUserId === user.id" class="email-edit-row">
+                <td colspan="7">
+                  <div class="email-edit-box">
+                    <span class="email-edit-label">Nuevo email para <strong>{{ user.first_name }} {{ user.last_name }}</strong>:</span>
+                    <input
+                      v-model="emailEditValue"
+                      type="email"
+                      class="search-input email-edit-input"
+                      placeholder="nuevo@correo.com"
+                      @keyup.enter="saveEmail(user)"
+                      @keyup.escape="cancelEmailEdit"
+                    />
+                    <button class="btn-primary btn-sm" :disabled="emailEditSaving" @click="saveEmail(user)">
+                      <span v-if="emailEditSaving" class="spinner spinner--sm" />
+                      {{ emailEditSaving ? '...' : 'Guardar' }}
+                    </button>
+                    <button class="btn-action btn-action--deactivate btn-sm" @click="cancelEmailEdit">Cancelar</button>
+                    <span v-if="emailEditError" class="email-edit-error">{{ emailEditError }}</span>
+                  </div>
+                </td>
+              </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -479,6 +511,7 @@ import { ref, computed, onMounted } from 'vue'
 import AppFooter from '@/components/AppFooter.vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { adminApi, type GlobalStats, type AdminUser, type AdminCourse } from '@/api/adminApi'
+import { usersApi } from '@/api/usersApi'
 import { challengesApi } from '@/api/challengesApi'
 import type { Challenge } from '@/types/challenges'
 import ChallengeFormModal from './components/ChallengeFormModal.vue'
@@ -744,6 +777,43 @@ async function toggleAchievement(a: SandboxAchievement) {
   const updated = await achievementsApi.adminUpdate(a.id, { is_active: !a.is_active })
   const idx = adminAchievements.value.findIndex(x => x.id === a.id)
   if (idx !== -1) adminAchievements.value[idx] = updated
+}
+
+// ── Email edit (inline en tabla) ─────────────────────────────
+const emailEditUserId = ref<string | null>(null)
+const emailEditValue = ref('')
+const emailEditSaving = ref(false)
+const emailEditError = ref('')
+
+function startEmailEdit(user: AdminUser) {
+  emailEditUserId.value = user.id
+  emailEditValue.value = user.email
+  emailEditError.value = ''
+}
+
+function cancelEmailEdit() {
+  emailEditUserId.value = null
+  emailEditValue.value = ''
+  emailEditError.value = ''
+}
+
+async function saveEmail(user: AdminUser) {
+  emailEditError.value = ''
+  if (!emailEditValue.value || emailEditValue.value === user.email) {
+    cancelEmailEdit()
+    return
+  }
+  emailEditSaving.value = true
+  try {
+    const updated = await adminApi.changeUserEmail(user.id, emailEditValue.value)
+    const idx = users.value.findIndex(u => u.id === user.id)
+    if (idx !== -1) users.value[idx] = updated
+    cancelEmailEdit()
+  } catch (e: any) {
+    emailEditError.value = e?.response?.data?.detail ?? 'Error al actualizar email'
+  } finally {
+    emailEditSaving.value = false
+  }
 }
 
 async function seedAchievements() {
@@ -1138,6 +1208,49 @@ onMounted(async () => {
   color: #a6e3a1;
 }
 .btn-action--activate:hover:not(:disabled) { background: #a6e3a125; }
+
+.btn-action--email {
+  background: #89b4fa15;
+  border-color: #89b4fa40;
+  color: #89b4fa;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.55rem;
+}
+.btn-action--email:hover { background: #89b4fa25; }
+
+.btn-sm {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem;
+}
+
+.email-edit-row td {
+  background: #1e1e2e;
+  padding: 0.5rem 1rem;
+}
+
+.email-edit-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.email-edit-label {
+  font-size: 0.78rem;
+  color: #a6adc8;
+  white-space: nowrap;
+}
+
+.email-edit-input {
+  width: 220px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+.email-edit-error {
+  font-size: 0.75rem;
+  color: #f38ba8;
+}
 
 /* ── Spinners ────────────────────────────────────────────── */
 .spinner {

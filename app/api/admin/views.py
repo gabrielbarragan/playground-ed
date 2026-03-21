@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.auth import get_current_admin, UserContext
 from app.api.admin import process
+from app.api.admin.serializer import AdminChangeEmailSerializer
 from app.api.courses.serializer import CourseInSerializer
 
 router = APIRouter(prefix="/api/v1/admin", tags=["Admin"])
@@ -71,6 +72,20 @@ async def toggle_course(
         return process.toggle_course(course_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.put("/users/{user_id}/email")
+async def change_user_email(
+    user_id: str,
+    body: AdminChangeEmailSerializer,
+    _: UserContext = Depends(get_current_admin),
+):
+    """Admin cambia el email de un estudiante directamente (sin confirmación)."""
+    try:
+        return await process.admin_change_email_process(user_id, body.new_email)
+    except ValueError as e:
+        code = status.HTTP_409_CONFLICT if "uso" in str(e) else status.HTTP_404_NOT_FOUND
+        raise HTTPException(status_code=code, detail=str(e))
 
 
 @router.get("/stats")

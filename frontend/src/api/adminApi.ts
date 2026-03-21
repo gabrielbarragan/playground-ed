@@ -81,4 +81,9 @@ export const adminApi = {
     const { data } = await apiClient.patch(`/api/v1/admin/courses/${courseId}/toggle`)
     return data
   },
+
+  async changeUserEmail(userId: string, new_email: string): Promise<AdminUser> {
+    const { data } = await apiClient.put<AdminUser>(`/api/v1/admin/users/${userId}/email`, { new_email })
+    return data
+  },
 }
