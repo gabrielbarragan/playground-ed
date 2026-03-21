@@ -24,6 +24,11 @@ class User(Document):
     # Desnormalizado para ranking en tiempo real sin aggregation costosa
     total_points = IntField(default=0)
     badge = StringField(default="🐍")
+    # Recuperación de contraseña (SHA256 del token JWT one-time)
+    reset_token_hash = StringField(null=True, default=None)
+    # Cambio de email pendiente de confirmación
+    pending_email = StringField(null=True, default=None)
+    email_change_token_hash = StringField(null=True, default=None)
 
     meta = {
         "collection": "users",
