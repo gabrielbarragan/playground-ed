@@ -191,7 +191,33 @@
           />
         </template>
         <div class="ch-terminal-pane">
-          <TerminalOutput :status="store.status" />
+          <div class="output-tabs">
+            <button
+              class="output-tab"
+              :class="{ 'output-tab--active': outputMode === 'terminal' }"
+              @click="outputMode = 'terminal'"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="4 17 10 11 4 5" />
+                <line x1="12" y1="19" x2="20" y2="19" />
+              </svg>
+              Terminal
+            </button>
+            <button
+              class="output-tab"
+              :class="{ 'output-tab--active': outputMode === 'canvas' }"
+              @click="outputMode = 'canvas'"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+              Canvas
+              <span v-if="hasGfxOutput" class="gfx-dot" />
+            </button>
+          </div>
+          <TerminalOutput v-show="outputMode === 'terminal'" :status="store.status" />
+          <CanvasRenderer v-show="outputMode === 'canvas'" ref="canvasRef" />
         </div>
       </section>
     </main>
@@ -226,6 +252,7 @@ import { badgesApi, type Badge } from '@/api/badgesApi'
 import { useChallengesStore } from '@/stores/useChallengesStore'
 import MonacoEditor from './components/MonacoEditor.vue'
 import TerminalOutput from './components/TerminalOutput.vue'
+import CanvasRenderer from './components/CanvasRenderer.vue'
 import SaveSnippetModal from './components/SaveSnippetModal.vue'
 import SnippetsPanel from './components/SnippetsPanel.vue'
 import ChallengesPanel from './components/ChallengesPanel.vue'
@@ -242,6 +269,20 @@ const showSaveModal = ref(false)
 const showSnippetsPanel = ref(false)
 const showChallengesPanel = ref(false)
 const showAchievementsPanel = ref(false)
+
+// ── Canvas / Terminal tabs ──────────────────────────────────
+const outputMode = ref<'terminal' | 'canvas'>('terminal')
+const hasGfxOutput = ref(false)
+const canvasRef = ref<InstanceType<typeof CanvasRenderer> | null>(null)
+
+store.onGfxMessage((msg) => {
+  hasGfxOutput.value = true
+  if (msg.data.cmd === 'init') {
+    outputMode.value = 'canvas'
+    canvasRef.value?.reset()
+  }
+  canvasRef.value?.handleGfxCommand(msg.data)
+})
 
 // ── Challenge mode ──────────────────────────────────────────
 const rightPaneRef = ref<HTMLElement | null>(null)
@@ -405,6 +446,8 @@ function checkMobile() {
 // ── Playground logic ──────────────────────────────────────
 function handleRun() {
   if (store.status === 'running' || !store.serverHealth) return
+  hasGfxOutput.value = false
+  canvasRef.value?.reset()
   store.executeCode()
 }
 
@@ -982,5 +1025,51 @@ onBeforeUnmount(() => {
     font-size: 0.7rem;
     padding: 0.2rem 0.45rem;
   }
+}
+/* ── Output tabs (Terminal / Canvas) ─────────────────────── */
+.output-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0.3rem 0.5rem 0;
+  background: #181825;
+  border-bottom: 1px solid #313244;
+  flex-shrink: 0;
+}
+
+.output-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  background: none;
+  border: none;
+  border-radius: 4px 4px 0 0;
+  color: #6c7086;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: color 0.15s, background 0.15s;
+  position: relative;
+}
+
+.output-tab:hover {
+  color: #cdd6f4;
+  background: #1e1e2e;
+}
+
+.output-tab--active {
+  color: #cba6f7;
+  background: #1e1e2e;
+  box-shadow: 0 -1px 0 0 #cba6f7 inset;
+}
+
+.gfx-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a6e3a1;
+  flex-shrink: 0;
 }
 </style>

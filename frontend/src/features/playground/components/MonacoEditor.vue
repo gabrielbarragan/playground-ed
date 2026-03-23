@@ -77,6 +77,10 @@ function blockEvent(e: Event) {
   e.stopPropagation()
 }
 
+function blockMiddle(e: MouseEvent) {
+  if (e.button === 1) { e.preventDefault(); e.stopPropagation() }
+}
+
 onMounted(() => {
   if (!containerRef.value) return
 
@@ -88,9 +92,9 @@ onMounted(() => {
   containerRef.value.addEventListener('copy', blockEvent, true)
   containerRef.value.addEventListener('cut', blockEvent, true)
   containerRef.value.addEventListener('paste', blockEvent, true)
-  containerRef.value.addEventListener('mousedown', (e: MouseEvent) => {
-    if (e.button === 1) e.preventDefault()  // bloquear middle-click paste (Linux X11)
-  }, true)
+  containerRef.value.addEventListener('mousedown',  blockMiddle, true)
+  containerRef.value.addEventListener('mouseup',    blockMiddle, true)
+  containerRef.value.addEventListener('auxclick',   blockMiddle, true)
 
   editor = monaco.editor.create(containerRef.value, {
     value: props.modelValue,
@@ -158,6 +162,9 @@ onBeforeUnmount(() => {
     containerRef.value.removeEventListener('copy', blockEvent, true)
     containerRef.value.removeEventListener('cut', blockEvent, true)
     containerRef.value.removeEventListener('paste', blockEvent, true)
+    containerRef.value.removeEventListener('mousedown',  blockMiddle, true)
+    containerRef.value.removeEventListener('mouseup',    blockMiddle, true)
+    containerRef.value.removeEventListener('auxclick',   blockMiddle, true)
   }
   editor?.dispose()
 })
