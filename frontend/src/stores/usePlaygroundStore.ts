@@ -14,8 +14,9 @@ export const usePlaygroundStore = defineStore('playground', () => {
   // WebSocket actual. shallowRef para no hacer reactive el objeto WS completo.
   const ws = shallowRef<WebSocket | null>(null)
 
-  // Callback registrado por TerminalOutput para recibir mensajes de streaming
+  // Callbacks registrados por los componentes de output
   let _onMessage: ((msg: WsServerMessage) => void) | null = null
+  let _onGfx: ((msg: WsServerMessage & { type: 'gfx' }) => void) | null = null
 
   // ── WebSocket helpers ─────────────────────────────────────
   function _wsUrl(): string {
@@ -43,6 +44,11 @@ export const usePlaygroundStore = defineStore('playground', () => {
     _onMessage = cb
   }
 
+  /** Registra el callback de CanvasRenderer para recibir comandos GFX. */
+  function onGfxMessage(cb: (msg: WsServerMessage & { type: 'gfx' }) => void) {
+    _onGfx = cb
+  }
+
   function executeCode() {
     if (status.value === 'running') return
     _teardown()
@@ -67,8 +73,12 @@ export const usePlaygroundStore = defineStore('playground', () => {
         status.value = 'error'
       }
 
-      // Delega el rendering al terminal
-      _onMessage?.(msg)
+      // Delega el rendering al terminal o al canvas
+      if (msg.type === 'gfx') {
+        _onGfx?.(msg as WsServerMessage & { type: 'gfx' })
+      } else {
+        _onMessage?.(msg)
+      }
     }
 
     socket.onerror = () => {
@@ -130,6 +140,7 @@ export const usePlaygroundStore = defineStore('playground', () => {
     serverVersion,
     ws,
     onWsMessage,
+    onGfxMessage,
     executeCode,
     sendStdin,
     stopExecution,

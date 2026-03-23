@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import resource
 import sys
@@ -20,6 +21,11 @@ def _apply_resource_limits() -> None:
     resource.setrlimit(resource.RLIMIT_NPROC, (10, 10))
 
 
+_SANDBOX_MODULES = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "sandbox_modules"
+)
+
+
 def _clean_env() -> dict:
     return {
         "PATH": "/usr/local/bin:/usr/bin:/bin",
@@ -27,6 +33,7 @@ def _clean_env() -> dict:
         "LANG": os.environ.get("LANG", "en_US.UTF-8"),
         "PYTHONIOENCODING": "utf-8",
         "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONPATH": _SANDBOX_MODULES,
     }
 
 
@@ -168,22 +175,33 @@ class InteractiveExecutor:
 
     async def _stream_pipe(self, pipe, msg_type: str, websocket) -> None:
         total = 0
+        _GFX_PREFIX = b"__GFX__:"
         try:
             while True:
-                chunk = await pipe.read(4096)
-                if not chunk:
+                line = await pipe.readline()
+                if not line:
                     break
-                total += len(chunk)
+                total += len(line)
                 if total > self.MAX_OUTPUT:
                     await self._send(websocket, {
                         "type": "stderr",
                         "data": "\n[Salida truncada: límite de 50 KB alcanzado]\n",
                     })
                     break
-                await self._send(websocket, {
-                    "type": msg_type,
-                    "data": chunk.decode("utf-8", errors="replace"),
-                })
+                if msg_type == "stdout" and line.startswith(_GFX_PREFIX):
+                    payload = line[len(_GFX_PREFIX):].decode("utf-8", errors="replace").strip()
+                    try:
+                        await self._send(websocket, {
+                            "type": "gfx",
+                            "data": json.loads(payload),
+                        })
+                    except json.JSONDecodeError:
+                        pass
+                else:
+                    await self._send(websocket, {
+                        "type": msg_type,
+                        "data": line.decode("utf-8", errors="replace"),
+                    })
         except Exception:
             pass
 
