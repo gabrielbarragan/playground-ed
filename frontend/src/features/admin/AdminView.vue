@@ -277,7 +277,7 @@
             <tbody>
               <template v-for="user in filteredUsers" :key="user.id">
               <tr :class="{ 'row--inactive': !user.is_active }">
-                <td class="cell-name">
+                <td class="cell-name cell-name--link" @click="openProfile(user)">
                   {{ user.first_name }} {{ user.last_name }}
                 </td>
                 <td class="cell-email">{{ user.email }}</td>
@@ -503,6 +503,9 @@
       @saved="onQuizSaved"
     />
     <AppFooter />
+
+    <!-- Drawer de perfil de estudiante -->
+    <StudentProfileDrawer @go-to-submissions="goToSubmissions" />
   </div>
 </template>
 
@@ -521,8 +524,20 @@ import QuizResultsPanel from './components/QuizResultsPanel.vue'
 import { quizzesApi } from '@/api/quizzesApi'
 import type { Quiz } from '@/types/quizzes'
 import { achievementsApi, type SandboxAchievement } from '@/api/achievementsApi'
+import StudentProfileDrawer from './components/StudentProfileDrawer.vue'
+import { useStudentProfileStore } from '@/stores/useStudentProfileStore'
 
 const auth = useAuthStore()
+const studentProfile = useStudentProfileStore()
+
+function openProfile(user: AdminUser) {
+  studentProfile.open(user.id)
+}
+
+function goToSubmissions() {
+  studentProfile.close()
+  activeTab.value = 'submissions'
+}
 
 const TABS = [
   { id: 'users', label: 'Usuarios' },
@@ -1136,6 +1151,18 @@ onMounted(async () => {
 
 .cell-name { font-weight: 500; white-space: nowrap; }
 
+.cell-name--link {
+  color: #cba6f7;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 2px;
+  transition: text-decoration-color 0.15s, color 0.15s;
+}
+.cell-name--link:hover {
+  text-decoration-color: #cba6f7;
+}
+
 .cell-email {
   color: #6c7086;
   font-size: 0.78rem;
@@ -1217,6 +1244,7 @@ onMounted(async () => {
   padding: 0.2rem 0.55rem;
 }
 .btn-action--email:hover { background: #89b4fa25; }
+
 
 .btn-sm {
   padding: 0.3rem 0.75rem;
