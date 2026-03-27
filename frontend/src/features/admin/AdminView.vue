@@ -487,6 +487,11 @@
         </div>
       </template><!-- end achievements tab -->
 
+      <!-- ── Analítica tab ────────────────────────────────── -->
+      <template v-if="activeTab === 'analytics'">
+        <AnalyticsPanel :challenges="challenges" :courses="courses" />
+      </template>
+
     </main>
 
     <!-- Modals -->
@@ -526,6 +531,7 @@ import type { Quiz } from '@/types/quizzes'
 import { achievementsApi, type SandboxAchievement } from '@/api/achievementsApi'
 import StudentProfileDrawer from './components/StudentProfileDrawer.vue'
 import { useStudentProfileStore } from '@/stores/useStudentProfileStore'
+import AnalyticsPanel from './components/AnalyticsPanel.vue'
 
 const auth = useAuthStore()
 const studentProfile = useStudentProfileStore()
@@ -546,6 +552,7 @@ const TABS = [
   { id: 'submissions', label: 'Revisiones' },
   { id: 'quizzes', label: 'Evaluaciones' },
   { id: 'achievements', label: '🏆 Logros' },
+  { id: 'analytics', label: '📊 Analítica' },
 ]
 const activeTab = ref('users')
 

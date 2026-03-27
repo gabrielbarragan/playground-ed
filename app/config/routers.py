@@ -14,6 +14,7 @@ from app.api.challenges import views as challenges
 from app.api.quizzes import views as quizzes
 from app.api.sandbox_achievements import views as sandbox_achievements
 from app.api.admin import student_views as student_profile
+from app.api.admin import analytics_views as admin_analytics
 
 urls = APIRouter()
 
@@ -35,3 +36,4 @@ urls.include_router(quizzes.student_router)
 urls.include_router(sandbox_achievements.admin_router)
 urls.include_router(sandbox_achievements.student_router)
 urls.include_router(student_profile.router)
+urls.include_router(admin_analytics.router)
