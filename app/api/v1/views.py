@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from app.core.auth import get_optional_user, UserContext, decode_token
 from app.core.handlers import CodeExecutorHandler
 from app.core.process import InteractiveExecutor
+from app.core.error_event_handler import ErrorEventHandler
 from app.api.v1.serializer import CodeExecutionInSerializer
 from app.api.dashboard.handler import ActivityHandler
 from app.api.sandbox_achievements.handler import AchievementHandler
@@ -33,6 +34,13 @@ async def run_code(
         code=request.code,
         success=success,
     )
+
+    if not success and ctx:
+        ErrorEventHandler.save(
+            user_id=ctx.id,
+            code=request.code,
+            stderr=response.get("stderr", ""),
+        )
 
     if success and ctx:
         new_achievements = AchievementHandler.unlock_for_run(ctx.id, request.code)
@@ -74,7 +82,15 @@ async def ws_run(
         code = msg["code"]
         ActivityHandler.log_execution(user_id=user_id, code=code, success=True)
 
-        exit_code = await InteractiveExecutor().run(code, websocket)
+        executor = InteractiveExecutor()
+        exit_code = await executor.run(code, websocket)
+
+        if user_id and exit_code != 0:
+            ErrorEventHandler.save(
+                user_id=user_id,
+                code=code,
+                stderr=executor.collected_stderr,
+            )
 
         if user_id and exit_code == 0:
             new_achievements = AchievementHandler.unlock_for_run(user_id, code)
