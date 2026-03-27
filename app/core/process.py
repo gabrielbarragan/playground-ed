@@ -118,6 +118,14 @@ class InteractiveExecutor:
     WALL_TIMEOUT = 120  # tiempo máximo total de sesión en segundos
     MAX_OUTPUT = 50_000
 
+    def __init__(self) -> None:
+        self._stderr_lines: list[str] = []
+
+    @property
+    def collected_stderr(self) -> str:
+        """Stderr acumulado durante la ejecución. Disponible tras run()."""
+        return "".join(self._stderr_lines)
+
     async def run(self, code: str, websocket) -> int:
         tmp_path = _write_temp(code)
         proc = None
@@ -188,6 +196,8 @@ class InteractiveExecutor:
                         "data": "\n[Salida truncada: límite de 50 KB alcanzado]\n",
                     })
                     break
+                if msg_type == "stderr":
+                    self._stderr_lines.append(line.decode("utf-8", errors="replace"))
                 if msg_type == "stdout" and line.startswith(_GFX_PREFIX):
                     payload = line[len(_GFX_PREFIX):].decode("utf-8", errors="replace").strip()
                     try:
