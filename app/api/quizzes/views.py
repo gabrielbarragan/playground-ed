@@ -30,6 +30,8 @@ async def create_quiz(
             points_on_complete=body.points_on_complete,
             points_on_pass=body.points_on_pass,
             show_correct_answers=body.show_correct_answers,
+            use_random_bank=body.use_random_bank,
+            questions_to_show=body.questions_to_show,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
