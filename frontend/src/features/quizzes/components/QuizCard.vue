@@ -14,7 +14,14 @@
     <p v-if="quiz.description" class="qc-description">{{ quiz.description }}</p>
 
     <div class="qc-meta">
-      <span class="qc-meta-item">{{ quiz.question_count }} preguntas</span>
+      <template v-if="quiz.use_random_bank && quiz.questions_to_show">
+        <span class="qc-meta-item qc-meta-item--bank">
+          {{ quiz.questions_to_show }} de {{ quiz.question_count }} preguntas (aleatorio)
+        </span>
+      </template>
+      <template v-else>
+        <span class="qc-meta-item">{{ quiz.question_count }} preguntas</span>
+      </template>
       <span class="qc-meta-sep">·</span>
       <span class="qc-meta-item">Aprobar con {{ quiz.passing_score }}</span>
     </div>
@@ -125,6 +132,7 @@ const STATUS_LABEL: Record<string, string> = {
   font-size: 0.72rem;
   color: #6c7086;
 }
+.qc-meta-item--bank { color: #89b4fa; }
 .qc-meta-sep { color: #45475a; font-size: 0.72rem; }
 
 .qc-actions {

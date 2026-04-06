@@ -1,3 +1,4 @@
+import random
 from datetime import datetime
 
 from app.api.quizzes.querysets import QuizQueryset, AttemptQueryset
@@ -5,6 +6,14 @@ from app.api.courses.querysets import CourseQueryset
 from app.api.users.querysets import UserQueryset
 from app.models.quiz import Quiz, QuizQuestion, QuizOption
 from app.models.quiz_attempt import QuizAttempt, QuizAnswerRecord
+
+def _get_random_indices(pool_size: int, count: int, seed: str) -> list[int]:
+    """Retorna índices únicos del pool en orden aleatorio, determinístico por seed."""
+    rng = random.Random(seed)
+    indices = list(range(pool_size))
+    rng.shuffle(indices)
+    return indices[:min(count, pool_size)]
+
 
 _quizzes = QuizQueryset()
 _attempts = AttemptQueryset()
@@ -44,20 +53,36 @@ def _serialize_quiz_for_admin(quiz: Quiz) -> dict:
         "points_on_complete": quiz.points_on_complete,
         "points_on_pass": quiz.points_on_pass,
         "show_correct_answers": quiz.show_correct_answers,
+        "use_random_bank": quiz.use_random_bank,
+        "questions_to_show": quiz.questions_to_show,
         "is_active": quiz.is_active,
         "created_at": quiz.created_at.isoformat(),
         "updated_at": quiz.updated_at.isoformat(),
     }
 
 
-def _serialize_quiz_for_student(quiz: Quiz) -> dict:
-    """NUNCA incluye correct_option_index ni explanation. Para vistas del estudiante pre-entrega."""
+def _serialize_quiz_for_student(quiz: Quiz, user_id: str | None = None) -> dict:
+    """
+    NUNCA incluye correct_option_index ni explanation. Para vistas del estudiante pre-entrega.
+    Si use_random_bank=True, filtra el subconjunto determinístico para ese usuario.
+    El campo 'index' de cada pregunta siempre es el índice original del pool.
+    """
     courses = []
     for c in quiz.courses:
         try:
             courses.append({"id": str(c.id), "name": c.name, "code": c.code})
         except Exception:
             pass
+
+    if quiz.use_random_bank and user_id:
+        seed = f"{user_id}_{str(quiz.id)}"
+        indices = _get_random_indices(len(quiz.questions), quiz.questions_to_show, seed)
+        questions_to_render = [(orig_i, quiz.questions[orig_i]) for orig_i in indices]
+        question_count = len(indices)
+    else:
+        questions_to_render = list(enumerate(quiz.questions))
+        question_count = len(quiz.questions)
+
     return {
         "id": str(quiz.id),
         "title": quiz.title,
@@ -65,20 +90,23 @@ def _serialize_quiz_for_student(quiz: Quiz) -> dict:
         "courses": courses,
         "questions": [
             {
-                "index": i,
+                "index": orig_i,  # índice original del pool, no posicional
                 "text": q.text,
                 "code_block": q.code_block,
                 "code_language": q.code_language,
                 "options": [{"text": o.text} for o in q.options],
                 # correct_option_index y explanation omitidos intencionalmente
             }
-            for i, q in enumerate(quiz.questions)
+            for orig_i, q in questions_to_render
         ],
-        "question_count": len(quiz.questions),
+        "question_count": question_count,
         "passing_score": quiz.passing_score,
         "points_on_complete": quiz.points_on_complete,
         "points_on_pass": quiz.points_on_pass,
         "show_correct_answers": quiz.show_correct_answers,
+        "use_random_bank": quiz.use_random_bank,
+        "questions_to_show": quiz.questions_to_show if quiz.use_random_bank else None,
+        "pool_size": len(quiz.questions) if quiz.use_random_bank else None,
     }
 
 
@@ -98,19 +126,27 @@ def _serialize_attempt_result(attempt: QuizAttempt, quiz: Quiz) -> dict:
     }
 
     if quiz.show_correct_answers:
+        # Lookup por question_index (índice del pool) para soportar banco aleatorio.
+        answers_by_q_index = {a.question_index: a for a in attempt.answers}
+        # Reconstruir el subconjunto que vio el alumno.
+        if attempt.selected_question_indices:
+            questions_shown = [(i, quiz.questions[i]) for i in attempt.selected_question_indices]
+        else:
+            questions_shown = list(enumerate(quiz.questions))
+
         result["questions"] = [
             {
-                "index": i,
+                "index": orig_i,
                 "text": q.text,
                 "code_block": q.code_block,
                 "code_language": q.code_language,
                 "options": [{"text": o.text} for o in q.options],
                 "correct_option_index": q.correct_option_index,
                 "explanation": q.explanation,
-                "selected_option_index": attempt.answers[i].selected_option_index,
-                "is_correct": attempt.answers[i].is_correct,
+                "selected_option_index": answers_by_q_index[orig_i].selected_option_index,
+                "is_correct": answers_by_q_index[orig_i].is_correct,
             }
-            for i, q in enumerate(quiz.questions)
+            for orig_i, q in questions_shown
         ]
 
     return result
@@ -132,6 +168,7 @@ def _serialize_attempt_for_admin(attempt: QuizAttempt) -> dict:
         "passed": attempt.passed,
         "points_earned": attempt.points_earned,
         "submitted_at": attempt.submitted_at.isoformat(),
+        "selected_question_indices": attempt.selected_question_indices,
     }
 
 
@@ -145,7 +182,14 @@ def create_quiz(
     points_on_complete: int,
     points_on_pass: int,
     show_correct_answers: bool,
+    use_random_bank: bool = False,
+    questions_to_show: int = 0,
 ) -> dict:
+    if use_random_bank:
+        if questions_to_show < 1:
+            raise ValueError("questions_to_show debe ser al menos 1 cuando se usa banco aleatorio")
+        if passing_score > questions_to_show:
+            raise ValueError("passing_score no puede superar questions_to_show")
     courses = _resolve_courses(course_ids)
     quiz = Quiz(
         title=title,
@@ -155,6 +199,8 @@ def create_quiz(
         points_on_complete=points_on_complete,
         points_on_pass=points_on_pass,
         show_correct_answers=show_correct_answers,
+        use_random_bank=use_random_bank,
+        questions_to_show=questions_to_show,
     ).save()
     return _serialize_quiz_for_admin(quiz)
 
@@ -183,6 +229,14 @@ def update_quiz(quiz_id: str, fields: dict) -> dict:
     fields["updated_at"] = datetime.utcnow()
     for key, value in fields.items():
         setattr(quiz, key, value)
+
+    # Re-validar invariante del banco aleatorio con los valores resultantes
+    if quiz.use_random_bank:
+        if quiz.questions_to_show < 1:
+            raise ValueError("questions_to_show debe ser al menos 1 cuando se usa banco aleatorio")
+        if quiz.passing_score > quiz.questions_to_show:
+            raise ValueError("passing_score no puede superar questions_to_show")
+
     quiz.save()
     return _serialize_quiz_for_admin(quiz)
 
@@ -333,6 +387,8 @@ def list_quizzes_for_user(user_id: str) -> dict:
             "points_on_complete": q.points_on_complete,
             "points_on_pass": q.points_on_pass,
             "show_correct_answers": q.show_correct_answers,
+            "use_random_bank": q.use_random_bank,
+            "questions_to_show": q.questions_to_show if q.use_random_bank else None,
             "status": status,
             "courses": courses,
         })
@@ -354,7 +410,7 @@ def get_quiz_for_user(quiz_id: str, user_id: str) -> dict:
     if course_ids and str(user.course.id) not in course_ids:
         raise ValueError("Quiz no disponible para tu curso")
 
-    return _serialize_quiz_for_student(quiz)
+    return _serialize_quiz_for_student(quiz, user_id=user_id)
 
 
 def get_my_result(quiz_id: str, user_id: str) -> dict:
@@ -403,21 +459,31 @@ def submit_quiz(quiz_id: str, user_id: str, answers: list[int]) -> dict:
     if existing:
         raise ValueError("Ya completaste este quiz. Solo se permite un intento.")
 
-    if len(answers) != len(quiz.questions):
+    # Determinar el subconjunto de preguntas a evaluar
+    if quiz.use_random_bank:
+        seed = f"{user_id}_{quiz_id}"
+        selected_indices = _get_random_indices(len(quiz.questions), quiz.questions_to_show, seed)
+    else:
+        selected_indices = list(range(len(quiz.questions)))
+
+    expected_count = len(selected_indices)
+    if len(answers) != expected_count:
         raise ValueError(
-            f"Se esperaban {len(quiz.questions)} respuestas, se recibieron {len(answers)}"
+            f"Se esperaban {expected_count} respuestas, se recibieron {len(answers)}"
         )
 
     answer_records = []
     correct_count = 0
-    for i, (question, selected) in enumerate(zip(quiz.questions, answers)):
+    for pos, orig_idx in enumerate(selected_indices):
+        question = quiz.questions[orig_idx]
+        selected = answers[pos]
         if selected < 0 or selected >= len(question.options):
-            raise ValueError(f"Índice de opción inválido en pregunta {i}: {selected}")
+            raise ValueError(f"Índice de opción inválido en pregunta {orig_idx}: {selected}")
         is_correct = selected == question.correct_option_index
         if is_correct:
             correct_count += 1
         answer_records.append(QuizAnswerRecord(
-            question_index=i,
+            question_index=orig_idx,  # índice original del pool
             selected_option_index=selected,
             is_correct=is_correct,
         ))
@@ -439,9 +505,10 @@ def submit_quiz(quiz_id: str, user_id: str, answers: list[int]) -> dict:
         quiz=quiz,
         answers=answer_records,
         correct_count=correct_count,
-        total_questions=len(quiz.questions),
+        total_questions=expected_count,
         passed=passed,
         points_earned=points_earned,
+        selected_question_indices=selected_indices,
     ).save()
 
     return _serialize_attempt_result(attempt, quiz)

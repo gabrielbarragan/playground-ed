@@ -40,6 +40,10 @@ class Quiz(Document):
     points_on_complete = IntField(default=0)               # puntos por entregar (aunque no apruebe)
     points_on_pass = IntField(default=0)                   # puntos extra por aprobar
 
+    # Configuración de Banco Aleatorio
+    use_random_bank = BooleanField(default=False)
+    questions_to_show = IntField(default=0)  # N preguntas a mostrar del pool (0 = sin banco)
+
     # Configuración de feedback post-entrega
     show_correct_answers = BooleanField(default=True)
 

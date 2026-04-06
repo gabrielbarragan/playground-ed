@@ -29,6 +29,8 @@ export interface Quiz {
   points_on_complete: number
   points_on_pass: number
   show_correct_answers: boolean
+  use_random_bank: boolean
+  questions_to_show: number
   is_active: boolean
   created_at: string
   updated_at: string
@@ -43,6 +45,8 @@ export interface QuizProgress {
   points_on_complete: number
   points_on_pass: number
   show_correct_answers: boolean
+  use_random_bank: boolean
+  questions_to_show: number | null
   status: 'pending' | 'completed' | 'passed'
   courses: { id: string; name: string; code: string }[]
 }
@@ -71,4 +75,5 @@ export interface QuizStudentResult {
   passed: boolean
   points_earned: number
   submitted_at: string
+  selected_question_indices: number[]
 }
