@@ -65,6 +65,28 @@
             <span class="toggle-text">Mostrar respuestas correctas al terminar</span>
           </label>
 
+          <label class="toggle-row">
+            <input v-model="form.use_random_bank" type="checkbox" class="toggle-check" />
+            <span class="toggle-text">Usar banco de preguntas aleatorio</span>
+          </label>
+
+          <div v-if="form.use_random_bank" class="bank-config">
+            <div class="field-group">
+              <label class="field-label">Preguntas por intento *</label>
+              <input
+                v-model.number="form.questions_to_show"
+                type="number"
+                min="1"
+                :max="savedQuiz ? savedQuiz.questions.length : undefined"
+                class="field-input field-number"
+              />
+              <span v-if="savedQuiz" class="field-hint">
+                Máximo: {{ savedQuiz.questions.length }} (preguntas actuales en el pool)
+              </span>
+            </div>
+            <div v-if="bankWarning" class="form-warning">{{ bankWarning }}</div>
+          </div>
+
           <div v-if="formError" class="form-error">{{ formError }}</div>
 
           <button class="btn-save" :disabled="saving" @click="handleSave">
@@ -188,7 +210,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { quizzesApi } from '@/api/quizzesApi'
 import { adminApi } from '@/api/adminApi'
 import type { Quiz } from '@/types/quizzes'
@@ -218,6 +240,17 @@ const form = reactive({
   points_on_complete: props.quiz?.points_on_complete ?? 0,
   points_on_pass: props.quiz?.points_on_pass ?? 0,
   show_correct_answers: props.quiz?.show_correct_answers ?? true,
+  use_random_bank: props.quiz?.use_random_bank ?? false,
+  questions_to_show: props.quiz?.questions_to_show ?? 0,
+})
+
+const bankWarning = computed(() => {
+  if (!form.use_random_bank) return ''
+  if (savedQuiz.value && form.questions_to_show > savedQuiz.value.questions.length)
+    return `El pool solo tiene ${savedQuiz.value.questions.length} preguntas.`
+  if (form.questions_to_show > 0 && form.passing_score > form.questions_to_show)
+    return `El puntaje de aprobación (${form.passing_score}) no puede superar las preguntas por intento (${form.questions_to_show}).`
+  return ''
 })
 
 const savedQuiz = ref<Quiz | null>(props.quiz)
@@ -229,6 +262,13 @@ async function handleSave() {
   formError.value = ''
   if (!form.title.trim()) { formError.value = 'El título es requerido.'; return }
   if (form.passing_score < 1) { formError.value = 'Correctas para aprobar debe ser ≥ 1.'; return }
+  if (form.use_random_bank) {
+    if (form.questions_to_show < 1) { formError.value = 'Indicá cuántas preguntas mostrar por intento.'; return }
+    if (form.passing_score > form.questions_to_show) {
+      formError.value = `El puntaje de aprobación no puede superar las preguntas por intento (${form.questions_to_show}).`
+      return
+    }
+  }
 
   saving.value = true
   try {
@@ -242,6 +282,8 @@ async function handleSave() {
         points_on_complete: form.points_on_complete,
         points_on_pass: form.points_on_pass,
         show_correct_answers: form.show_correct_answers,
+        use_random_bank: form.use_random_bank,
+        questions_to_show: form.use_random_bank ? form.questions_to_show : 0,
       })
     } else {
       result = await quizzesApi.adminCreate({
@@ -252,6 +294,8 @@ async function handleSave() {
         points_on_complete: form.points_on_complete,
         points_on_pass: form.points_on_pass,
         show_correct_answers: form.show_correct_answers,
+        use_random_bank: form.use_random_bank,
+        questions_to_show: form.use_random_bank ? form.questions_to_show : 0,
       })
     }
     savedQuiz.value = result
@@ -525,6 +569,31 @@ onMounted(async () => {
 }
 .toggle-check { accent-color: #cba6f7; cursor: pointer; }
 .toggle-text { transition: color 0.15s; }
+
+.bank-config {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 8px;
+}
+
+.field-hint {
+  font-size: 0.7rem;
+  color: #45475a;
+  margin-top: 0.15rem;
+}
+
+.form-warning {
+  font-size: 0.78rem;
+  color: #f9e2af;
+  background: #f9e2af10;
+  border: 1px solid #f9e2af30;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
 
 .form-error {
   font-size: 0.78rem;

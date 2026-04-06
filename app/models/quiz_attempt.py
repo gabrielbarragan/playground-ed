@@ -31,6 +31,11 @@ class QuizAttempt(Document):
     quiz = ReferenceField("Quiz", required=True)
     answers = ListField(EmbeddedDocumentField(QuizAnswerRecord), default=list)
 
+    # Índices del pool original seleccionados para este intento.
+    # Solo se popula cuando quiz.use_random_bank=True.
+    # Permite reproducir exactamente lo que vio el alumno aunque el pool cambie después.
+    selected_question_indices = ListField(IntField(), default=list)
+
     correct_count = IntField(required=True, default=0)
     total_questions = IntField(required=True)
     passed = BooleanField(required=True, default=False)

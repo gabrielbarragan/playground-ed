@@ -23,6 +23,8 @@ class CreateQuizSerializer(BaseModel):
     points_on_complete: int = Field(default=0, ge=0)
     points_on_pass: int = Field(default=0, ge=0)
     show_correct_answers: bool = Field(default=True)
+    use_random_bank: bool = Field(default=False)
+    questions_to_show: int = Field(default=0, ge=0)
 
 
 class UpdateQuizSerializer(BaseModel):
@@ -33,6 +35,8 @@ class UpdateQuizSerializer(BaseModel):
     points_on_complete: Optional[int] = Field(None, ge=0)
     points_on_pass: Optional[int] = Field(None, ge=0)
     show_correct_answers: Optional[bool] = None
+    use_random_bank: Optional[bool] = None
+    questions_to_show: Optional[int] = Field(None, ge=0)
     is_active: Optional[bool] = None
 
 

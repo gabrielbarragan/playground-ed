@@ -6,11 +6,13 @@ class QuizHandler:
     # ── CRUD admin ────────────────────────────────────────────
     @staticmethod
     def create(title, description, course_ids, passing_score,
-               points_on_complete, points_on_pass, show_correct_answers) -> dict:
+               points_on_complete, points_on_pass, show_correct_answers,
+               use_random_bank=False, questions_to_show=0) -> dict:
         return process.create_quiz(
             title=title, description=description, course_ids=course_ids,
             passing_score=passing_score, points_on_complete=points_on_complete,
             points_on_pass=points_on_pass, show_correct_answers=show_correct_answers,
+            use_random_bank=use_random_bank, questions_to_show=questions_to_show,
         )
 
     @staticmethod
