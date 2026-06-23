@@ -1,5 +1,21 @@
 # Changelog
 
+## Bloqueo de reenvío de retos resueltos o pendientes
+
+- **Fecha**: 2026-06-22
+- **Rama**: `feature/filtros-revision-envios`
+
+### Cambios
+
+- feat(api): agregar guard en `submit_challenge()` que bloquea envíos a retos ya aprobados
+- feat(api): agregar guard en `submit_challenge()` que bloquea envíos a retos con revisión pendiente
+- feat(api): agregar método `has_pending_review()` en `AttemptQueryset`
+- feat(frontend): agregar computed `canSubmit` y `activeStatus` en `useChallengesStore`
+- feat(frontend): condicionar botón "Enviar" con texto dinámico ("Resuelto ✓" / "En revisión ⏳") en `PlaygroundView`
+- feat(frontend): agregar banner de estado en `ChallengeDescription` cuando el reto está bloqueado
+
+---
+
 ## Filtros y ordenamiento en revisión de envíos
 
 - **Fecha**: 2026-06-22

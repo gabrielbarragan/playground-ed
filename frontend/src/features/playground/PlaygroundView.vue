@@ -150,10 +150,16 @@
             <button
               v-if="challengeStore.activeChallenge"
               class="btn-submit"
-              :disabled="challengeStore.submitting"
+              :class="{
+                'btn-submit--passed': challengeStore.activeStatus === 'passed',
+                'btn-submit--pending': challengeStore.activeStatus === 'pending_review',
+              }"
+              :disabled="challengeStore.submitting || !challengeStore.canSubmit"
               @click="handleSubmit"
             >
               <span v-if="challengeStore.submitting" class="spinner" />
+              <span v-else-if="challengeStore.activeStatus === 'passed'">Resuelto ✓</span>
+              <span v-else-if="challengeStore.activeStatus === 'pending_review'">En revisión ⏳</span>
               <span v-else>Enviar</span>
             </button>
           </template>
@@ -182,6 +188,7 @@
             <ChallengeDescription
               :challenge="challengeStore.activeChallenge"
               :last-attempt="challengeStore.lastAttempt"
+              :status="challengeStore.activeStatus"
             />
           </div>
           <div
@@ -936,6 +943,8 @@ onBeforeUnmount(() => {
 
 .btn-submit:hover:not(:disabled) { background: #b8f0b3; }
 .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-submit--passed:disabled { background: #a6e3a1; opacity: 0.7; }
+.btn-submit--pending:disabled { background: #fab387; opacity: 0.7; }
 
 /* ── Right pane split layout ─────────────────────────────── */
 .pane--right {

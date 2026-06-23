@@ -64,15 +64,15 @@ Actualmente un estudiante puede seguir enviando soluciones a un reto que ya apro
 
 ## Tasks
 
-- [ ] **BL-1**: Agregar método `has_pending_review(user, challenge)` en `AttemptQueryset` (`querysets.py`) — retorna `True` si existe un attempt con `review_status="pending"` para ese par usuario/reto
-- [ ] **BL-2**: Agregar guard en `submit_challenge()` (`process.py`) que rechace el envío si `user_already_passed()` es `True` — `raise ValueError("Ya completaste este reto")`
-- [ ] **BL-3**: Agregar guard en `submit_challenge()` (`process.py`) que rechace el envío si `has_pending_review()` es `True` — `raise ValueError("Ya tenés un envío pendiente de revisión para este reto")`
-- [ ] **BL-4**: Verificar que ambos guards se ejecutan antes de la validación AST y ejecución de test cases
-- [ ] **BL-5**: Agregar computed `canSubmit` en `useChallengesStore.ts` — `true` solo si hay reto activo con status `unsolved`
-- [ ] **BL-6**: Condicionar botón "Enviar" en `PlaygroundView.vue` con `canSubmit`; cambiar texto a "Resuelto ✓" si `passed` o "En revisión ⏳" si `pending_review`
-- [ ] **BL-7**: Agregar mensaje de estado en `ChallengeDescription.vue` cuando el reto ya fue aprobado o está pendiente de revisión
-- [ ] **BL-8**: Verificar que el botón vuelve a habilitarse cuando el docente rechaza un envío y el estudiante recarga la vista
-- [ ] **BL-9**: Verificar que el backend retorna HTTP 400 con mensaje descriptivo al intentar enviar un reto ya resuelto o pendiente
+- [x] **BL-1**: Agregar método `has_pending_review(user, challenge)` en `AttemptQueryset` (`querysets.py`) — retorna `True` si existe un attempt con `review_status="pending"` para ese par usuario/reto
+- [x] **BL-2**: Agregar guard en `submit_challenge()` (`process.py`) que rechace el envío si `user_already_passed()` es `True` — `raise ValueError("Ya completaste este reto")`
+- [x] **BL-3**: Agregar guard en `submit_challenge()` (`process.py`) que rechace el envío si `has_pending_review()` es `True` — `raise ValueError("Ya tenés un envío pendiente de revisión para este reto")`
+- [x] **BL-4**: Verificar que ambos guards se ejecutan antes de la validación AST y ejecución de test cases
+- [x] **BL-5**: Agregar computed `canSubmit` en `useChallengesStore.ts` — `true` solo si hay reto activo con status `unsolved`
+- [x] **BL-6**: Condicionar botón "Enviar" en `PlaygroundView.vue` con `canSubmit`; cambiar texto a "Resuelto ✓" si `passed` o "En revisión ⏳" si `pending_review`
+- [x] **BL-7**: Agregar mensaje de estado en `ChallengeDescription.vue` cuando el reto ya fue aprobado o está pendiente de revisión
+- [x] **BL-8**: Verificar que el botón vuelve a habilitarse cuando el docente rechaza un envío y el estudiante recarga la vista
+- [x] **BL-9**: Verificar que el backend retorna HTTP 400 con mensaje descriptivo al intentar enviar un reto ya resuelto o pendiente
 
 ## Requerimientos (Gherkin)
 
