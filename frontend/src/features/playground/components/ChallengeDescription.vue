@@ -46,6 +46,16 @@
         <span v-for="tag in challenge.tags" :key="tag" class="ch-tag">{{ tag }}</span>
       </div>
 
+      <!-- Status banner -->
+      <div v-if="status === 'passed'" class="ch-status-banner ch-status--passed">
+        <span class="ch-status-icon">✓</span>
+        <span class="ch-status-text">Ya completaste este reto.</span>
+      </div>
+      <div v-else-if="status === 'pending_review'" class="ch-status-banner ch-status--pending">
+        <span class="ch-status-icon">⏳</span>
+        <span class="ch-status-text">Tu envío está pendiente de revisión. No podés enviar otro intento hasta que sea revisado.</span>
+      </div>
+
       <!-- Error de validación AST (funciones no definidas) -->
       <div v-if="lastAttempt?.ast_validation_error" class="ch-ast-error">
         <span class="ch-ast-icon">⚠️</span>
@@ -122,6 +132,7 @@ import type { Challenge, Attempt } from '@/types/challenges'
 const props = defineProps<{
   challenge: Challenge
   lastAttempt: Attempt | null
+  status?: 'passed' | 'pending_review' | 'unsolved' | null
 }>()
 
 const descriptionHtml = computed(() =>
@@ -398,6 +409,29 @@ const attemptTitle = computed(() => {
   border-radius: 4px;
   background: #313244;
   color: #6c7086;
+}
+
+/* ── Status banner ────────────────────────────────────────── */
+.ch-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+}
+.ch-status-icon { flex-shrink: 0; font-size: 0.9rem; }
+.ch-status-text { line-height: 1.4; }
+
+.ch-status--passed {
+  background: #1e3a1e;
+  border: 1px solid #a6e3a140;
+  color: #a6e3a1;
+}
+.ch-status--pending {
+  background: #2a2215;
+  border: 1px solid #fab38740;
+  color: #fab387;
 }
 
 /* ── Attempt result ───────────────────────────────────────── */

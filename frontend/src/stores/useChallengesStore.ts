@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { challengesApi } from '@/api/challengesApi'
 import type { Challenge, ChallengeProgress, Attempt } from '@/types/challenges'
 
@@ -9,6 +9,14 @@ export const useChallengesStore = defineStore('challenges', () => {
   const lastAttempt = ref<Attempt | null>(null)
   const submitting = ref(false)
   const loading = ref(false)
+
+  const activeStatus = computed<ChallengeProgress['status'] | null>(() => {
+    if (!activeChallenge.value) return null
+    const p = progress.value.find(c => c.id === activeChallenge.value!.id)
+    return p?.status ?? 'unsolved'
+  })
+
+  const canSubmit = computed(() => activeStatus.value === 'unsolved')
 
   async function fetchProgress() {
     loading.value = true
@@ -52,6 +60,8 @@ export const useChallengesStore = defineStore('challenges', () => {
   return {
     progress,
     activeChallenge,
+    activeStatus,
+    canSubmit,
     lastAttempt,
     loading,
     submitting,
