@@ -51,8 +51,18 @@ class ChallengeHandler:
 
     # ── Manual review ─────────────────────────────────────────
     @staticmethod
-    def list_pending(challenge_id: Optional[str] = None) -> dict:
-        return process.list_pending_reviews(challenge_id)
+    def list_pending(
+        challenge_id: Optional[str] = None,
+        course_id: Optional[str] = None,
+        sort_by: str = "date",
+        sort_dir: str = "asc",
+    ) -> dict:
+        return process.list_pending_reviews(
+            challenge_id=challenge_id,
+            course_id=course_id,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+        )
 
     @staticmethod
     def approve(attempt_id: str, reviewer_id: str, feedback: str) -> dict:
