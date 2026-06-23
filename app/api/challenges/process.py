@@ -86,6 +86,11 @@ def _serialize_attempt(attempt) -> dict:
             "title": attempt.challenge.title,
             "difficulty": attempt.challenge.difficulty,
             "points": attempt.challenge.points,
+            "courses": [
+                {"id": str(c.id), "name": c.name, "code": c.code}
+                for c in (attempt.challenge.courses or [])
+                if c
+            ],
         },
         "code": attempt.code,
         "attempt_number": attempt.attempt_number,
@@ -258,11 +263,31 @@ def remove_test_case(challenge_id: str, index: int) -> dict:
 
 # ── Manual review ──────────────────────────────────────────────────────────────
 
-def list_pending_reviews(challenge_id: Optional[str] = None) -> dict:
-    attempts = _attempts.get_pending_review()
+def list_pending_reviews(
+    challenge_id: Optional[str] = None,
+    course_id: Optional[str] = None,
+    sort_by: str = "date",
+    sort_dir: str = "asc",
+) -> dict:
+    attempts = list(_attempts.get_pending_review())
     if challenge_id:
         attempts = [a for a in attempts if str(a.challenge.id) == challenge_id]
+    if course_id:
+        attempts = [
+            a for a in attempts
+            if any(str(c.id) == course_id for c in (a.challenge.courses or []))
+        ]
     items = [_serialize_attempt(a) for a in attempts]
+
+    sort_keys = {
+        "student_name": lambda s: (s["user"]["first_name"] + s["user"]["last_name"]).lower(),
+        "challenge_title": lambda s: s["challenge"]["title"].lower(),
+        "points": lambda s: s["challenge"]["points"],
+        "date": lambda s: s["submitted_at"],
+    }
+    key_fn = sort_keys.get(sort_by, sort_keys["date"])
+    items.sort(key=key_fn, reverse=(sort_dir == "desc"))
+
     return {"total": len(items), "submissions": items}
 
 

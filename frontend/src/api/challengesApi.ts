@@ -45,9 +45,19 @@ export const challengesApi = {
   },
 
   // ── Admin – Submissions ────────────────────────────────────
-  async pendingSubmissions(challengeId?: string): Promise<{ total: number; submissions: Attempt[] }> {
+  async pendingSubmissions(params?: {
+    challengeId?: string
+    courseId?: string
+    sortBy?: string
+    sortDir?: string
+  }): Promise<{ total: number; submissions: Attempt[] }> {
+    const query: Record<string, string> = {}
+    if (params?.challengeId) query.challenge_id = params.challengeId
+    if (params?.courseId) query.course_id = params.courseId
+    if (params?.sortBy) query.sort_by = params.sortBy
+    if (params?.sortDir) query.sort_dir = params.sortDir
     const { data } = await apiClient.get('/api/v1/admin/submissions/pending', {
-      params: challengeId ? { challenge_id: challengeId } : undefined,
+      params: Object.keys(query).length ? query : undefined,
     })
     return data
   },

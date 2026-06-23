@@ -2,13 +2,37 @@
   <div class="submissions">
     <div class="sub-toolbar">
       <span class="sub-count">
-        {{ submissions.length }} envío(s) pendiente(s)
+        {{ filtered.length }} envío(s) pendiente(s)
+        <span v-if="hasActiveFilters" class="sub-count-total">de {{ submissions.length }} total</span>
       </span>
       <button class="btn-refresh" @click="load" :disabled="loading">
         <span v-if="loading" class="spinner spinner--sm" />
         <span v-else>↺</span>
         Actualizar
       </button>
+    </div>
+
+    <!-- Filters & Sort -->
+    <div v-if="submissions.length" class="sub-filters">
+      <select v-model="filterCourse" class="sub-select">
+        <option value="">Todos los cursos</option>
+        <option v-for="c in courseOptions" :key="c.id" :value="c.id">{{ c.name }}</option>
+      </select>
+      <select v-model="filterChallenge" class="sub-select">
+        <option value="">Todos los retos</option>
+        <option v-for="ch in challengeOptions" :key="ch.id" :value="ch.id">{{ ch.title }}</option>
+      </select>
+      <div class="sub-sort">
+        <select v-model="sortBy" class="sub-select sub-select--sort">
+          <option value="date">Fecha</option>
+          <option value="student_name">Estudiante</option>
+          <option value="challenge_title">Reto</option>
+          <option value="points">Puntos</option>
+        </select>
+        <button class="btn-sort-dir" @click="toggleSortDir" :title="sortDir === 'asc' ? 'Ascendente' : 'Descendente'">
+          {{ sortDir === 'asc' ? '↑' : '↓' }}
+        </button>
+      </div>
     </div>
 
     <div v-if="loading && !submissions.length" class="sub-loading">
@@ -19,56 +43,62 @@
       No hay envíos pendientes de revisión.
     </div>
 
-    <div v-else class="sub-list">
-      <div v-for="s in submissions" :key="s.id" class="sub-card">
-        <div class="sub-card-header">
-          <div class="sub-info">
-            <span class="sub-student">{{ s.user.first_name }} {{ s.user.last_name }}</span>
-            <span class="sub-email">{{ s.user.email }}</span>
+    <template v-else>
+      <div v-if="!filtered.length" class="sub-empty">
+        No hay envíos que coincidan con los filtros.
+      </div>
+
+      <div v-else class="sub-list">
+        <div v-for="s in filtered" :key="s.id" class="sub-card">
+          <div class="sub-card-header">
+            <div class="sub-info">
+              <span class="sub-student">{{ s.user.first_name }} {{ s.user.last_name }}</span>
+              <span class="sub-email">{{ s.user.email }}</span>
+            </div>
+            <div class="sub-challenge-info">
+              <span class="sub-challenge-title">{{ s.challenge.title }}</span>
+              <span class="diff-badge" :class="`diff--${s.challenge.difficulty}`">
+                {{ diffLabel(s.challenge.difficulty) }}
+              </span>
+              <span class="sub-pts">{{ s.challenge.points }} pts base</span>
+              <span class="sub-attempt">intento #{{ s.attempt_number }}</span>
+            </div>
+            <span class="sub-date">{{ formatDate(s.submitted_at) }}</span>
           </div>
-          <div class="sub-challenge-info">
-            <span class="sub-challenge-title">{{ s.challenge.title }}</span>
-            <span class="diff-badge" :class="`diff--${s.challenge.difficulty}`">
-              {{ diffLabel(s.challenge.difficulty) }}
-            </span>
-            <span class="sub-pts">{{ s.challenge.points }} pts base</span>
-            <span class="sub-attempt">intento #{{ s.attempt_number }}</span>
+
+          <div class="sub-code-wrap">
+            <pre class="sub-code">{{ s.code }}</pre>
           </div>
-          <span class="sub-date">{{ formatDate(s.submitted_at) }}</span>
-        </div>
 
-        <div class="sub-code-wrap">
-          <pre class="sub-code">{{ s.code }}</pre>
-        </div>
+          <div v-if="activeId !== s.id" class="sub-actions">
+            <button class="btn-approve" @click="startReview(s.id)">Revisar</button>
+          </div>
 
-        <div v-if="activeId !== s.id" class="sub-actions">
-          <button class="btn-approve" @click="startReview(s.id)">Revisar</button>
-        </div>
-
-        <div v-else class="sub-review-form">
-          <textarea
-            v-model="feedback"
-            class="feedback-input"
-            rows="2"
-            placeholder="Comentario al estudiante (opcional)"
-          />
-          <div class="sub-review-btns">
-            <button class="btn-cancel-rev" @click="activeId = null">Cancelar</button>
-            <button class="btn-reject" :disabled="acting" @click="reject(s.id)">
-              <span v-if="acting === 'reject'" class="spinner spinner--sm" /> Rechazar
-            </button>
-            <button class="btn-approve-confirm" :disabled="!!acting" @click="approve(s.id)">
-              <span v-if="acting === 'approve'" class="spinner spinner--sm" /> Aprobar
-            </button>
+          <div v-else class="sub-review-form">
+            <textarea
+              v-model="feedback"
+              class="feedback-input"
+              rows="2"
+              placeholder="Comentario al estudiante (opcional)"
+            />
+            <div class="sub-review-btns">
+              <button class="btn-cancel-rev" @click="activeId = null">Cancelar</button>
+              <button class="btn-reject" :disabled="acting" @click="reject(s.id)">
+                <span v-if="acting === 'reject'" class="spinner spinner--sm" /> Rechazar
+              </button>
+              <button class="btn-approve-confirm" :disabled="!!acting" @click="approve(s.id)">
+                <span v-if="acting === 'approve'" class="spinner spinner--sm" /> Aprobar
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { challengesApi } from '@/api/challengesApi'
 import type { Attempt } from '@/types/challenges'
 
@@ -77,6 +107,76 @@ const loading = ref(false)
 const activeId = ref<string | null>(null)
 const feedback = ref('')
 const acting = ref<'approve' | 'reject' | null>(null)
+
+const filterCourse = ref('')
+const filterChallenge = ref('')
+const sortBy = ref('date')
+const sortDir = ref<'asc' | 'desc'>('asc')
+
+// Reset challenge filter when course changes
+watch(filterCourse, () => {
+  filterChallenge.value = ''
+})
+
+const hasActiveFilters = computed(() => filterCourse.value !== '' || filterChallenge.value !== '')
+
+const courseOptions = computed(() => {
+  const map = new Map<string, { id: string; name: string }>()
+  for (const s of submissions.value) {
+    for (const c of s.challenge.courses ?? []) {
+      if (!map.has(c.id)) map.set(c.id, { id: c.id, name: c.name })
+    }
+  }
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name))
+})
+
+const challengeOptions = computed(() => {
+  const map = new Map<string, { id: string; title: string }>()
+  for (const s of submissions.value) {
+    if (filterCourse.value) {
+      const inCourse = (s.challenge.courses ?? []).some((c: any) => c.id === filterCourse.value)
+      if (!inCourse) continue
+    }
+    if (!map.has(s.challenge.id)) {
+      map.set(s.challenge.id, { id: s.challenge.id, title: s.challenge.title })
+    }
+  }
+  return [...map.values()].sort((a, b) => a.title.localeCompare(b.title))
+})
+
+const filtered = computed(() => {
+  let list = submissions.value
+
+  if (filterCourse.value) {
+    list = list.filter(s =>
+      (s.challenge.courses ?? []).some((c: any) => c.id === filterCourse.value)
+    )
+  }
+  if (filterChallenge.value) {
+    list = list.filter(s => s.challenge.id === filterChallenge.value)
+  }
+
+  const sortKeys: Record<string, (s: Attempt) => string | number> = {
+    student_name: (s) => (s.user.first_name + s.user.last_name).toLowerCase(),
+    challenge_title: (s) => s.challenge.title.toLowerCase(),
+    points: (s) => s.challenge.points,
+    date: (s) => s.submitted_at,
+  }
+  const keyFn = sortKeys[sortBy.value] ?? sortKeys.date
+  const sorted = [...list].sort((a, b) => {
+    const va = keyFn(a)
+    const vb = keyFn(b)
+    if (va < vb) return sortDir.value === 'asc' ? -1 : 1
+    if (va > vb) return sortDir.value === 'asc' ? 1 : -1
+    return 0
+  })
+
+  return sorted
+})
+
+function toggleSortDir() {
+  sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+}
 
 async function load() {
   loading.value = true
@@ -131,9 +231,10 @@ onMounted(load)
 
 .sub-toolbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0.75rem 0; margin-bottom: 0.75rem;
+  padding: 0.75rem 0; margin-bottom: 0.25rem;
 }
 .sub-count { font-size: 0.82rem; color: #6c7086; }
+.sub-count-total { color: #45475a; font-size: 0.75rem; }
 .btn-refresh {
   display: flex; align-items: center; gap: 0.4rem;
   background: transparent; border: 1px solid #313244; border-radius: 6px;
@@ -142,6 +243,35 @@ onMounted(load)
 }
 .btn-refresh:hover:not(:disabled) { border-color: #585b70; }
 
+/* ── Filters ── */
+.sub-filters {
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  padding-bottom: 0.75rem; margin-bottom: 0.75rem;
+  border-bottom: 1px solid #313244;
+}
+.sub-select {
+  background: #181825; border: 1px solid #313244; border-radius: 6px;
+  color: #cdd6f4; padding: 0.35rem 0.6rem; font-size: 0.78rem;
+  font-family: inherit; cursor: pointer; outline: none;
+  min-width: 0;
+}
+.sub-select:focus { border-color: #cba6f7; }
+.sub-select option { background: #181825; color: #cdd6f4; }
+
+.sub-sort {
+  display: flex; align-items: center; gap: 0.25rem; margin-left: auto;
+}
+.sub-select--sort { min-width: 100px; }
+
+.btn-sort-dir {
+  background: #181825; border: 1px solid #313244; border-radius: 6px;
+  color: #cba6f7; width: 30px; height: 30px; font-size: 0.9rem;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-family: inherit; padding: 0;
+}
+.btn-sort-dir:hover { border-color: #cba6f7; }
+
+/* ── List ── */
 .sub-loading, .sub-empty {
   display: flex; align-items: center; gap: 0.75rem;
   color: #6c7086; font-size: 0.85rem; padding: 2rem 0; justify-content: center;
