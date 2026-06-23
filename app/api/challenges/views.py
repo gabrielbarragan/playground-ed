@@ -138,13 +138,22 @@ async def remove_test_case(
 @submissions_router.get("/pending")
 async def list_pending(
     challenge_id: Optional[str] = Query(default=None),
+    course_id: Optional[str] = Query(default=None),
+    sort_by: str = Query(default="date"),
+    sort_dir: str = Query(default="asc"),
     _: UserContext = Depends(get_current_admin),
 ):
     """
     Lista todos los intentos pendientes de revisión manual.
-    Se puede filtrar por `challenge_id`.
+    Filtrable por `challenge_id` y/o `course_id`.
+    Ordenable por `sort_by` (date|student_name|challenge_title|points) y `sort_dir` (asc|desc).
     """
-    return ChallengeHandler.list_pending(challenge_id=challenge_id)
+    return ChallengeHandler.list_pending(
+        challenge_id=challenge_id,
+        course_id=course_id,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    )
 
 
 @submissions_router.put("/{attempt_id}/approve")

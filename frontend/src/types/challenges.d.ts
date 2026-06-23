@@ -51,7 +51,7 @@ export interface TestCaseResult {
 export interface Attempt {
   id: string
   user: { id: string; first_name: string; last_name: string; email: string }
-  challenge: { id: string; title: string; difficulty: string; points: number }
+  challenge: { id: string; title: string; difficulty: string; points: number; courses?: { id: string; name: string; code: string }[] }
   code: string
   attempt_number: number
   passed: boolean
