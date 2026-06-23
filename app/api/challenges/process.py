@@ -397,6 +397,12 @@ async def submit_challenge(challenge_id: str, user_id: str, code: str) -> dict:
     if course_ids and str(user.course.id) not in course_ids:
         raise ValueError("Reto no disponible para tu curso")
 
+    if _attempts.user_already_passed(user, challenge):
+        raise ValueError("Ya completaste este reto")
+
+    if _attempts.has_pending_review(user, challenge):
+        raise ValueError("Ya tenés un envío pendiente de revisión para este reto")
+
     # ── Validación AST: funciones requeridas ───────────────────────────────────
     ast_error = check_required_functions(code, list(challenge.required_functions or []))
     if ast_error:

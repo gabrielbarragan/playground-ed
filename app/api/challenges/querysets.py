@@ -47,3 +47,6 @@ class AttemptQueryset(BaseQueryset):
 
     def user_already_passed(self, user, challenge) -> bool:
         return self.model.objects(user=user, challenge=challenge, passed=True).count() > 0
+
+    def has_pending_review(self, user, challenge) -> bool:
+        return self.model.objects(user=user, challenge=challenge, review_status="pending").count() > 0
