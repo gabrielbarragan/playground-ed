@@ -8,6 +8,7 @@ from app.models.challenge_attempt import ChallengeAttempt
 from app.models.reward import Reward
 from app.models.user_reward import UserReward
 from app.models.sandbox_achievement import SandboxAchievement, UserSandboxAchievement
+from app.models.course_change_request import CourseChangeRequest
 
 __all__ = [
     "Course",
@@ -22,4 +23,5 @@ __all__ = [
     "UserReward",
     "SandboxAchievement",
     "UserSandboxAchievement",
+    "CourseChangeRequest",
 ]

@@ -13,6 +13,7 @@ export interface SuperAdminUser {
   role: UserRole
   total_points: number
   course: { id: string; name: string; code: string } | null
+  assigned_courses: { id: string; name: string; code: string }[]
   created_at: string
   last_login: string | null
 }
@@ -55,6 +56,11 @@ export const superAdminApi = {
 
   async toggleCourse(courseId: string): Promise<SuperAdminCourse> {
     const { data } = await apiClient.patch(`/api/v1/superadmin/courses/${courseId}/toggle`)
+    return data
+  },
+
+  async assignCourses(userId: string, courseIds: string[]): Promise<SuperAdminUser> {
+    const { data } = await apiClient.put(`/api/v1/superadmin/users/${userId}/courses`, { course_ids: courseIds })
     return data
   },
 }

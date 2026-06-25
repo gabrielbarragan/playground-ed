@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.core.auth import get_current_admin, get_current_user, UserContext
+from app.core.auth import get_current_admin, get_current_user, get_admin_course_ids, UserContext
 from app.api.challenges.handler import ChallengeHandler
 from app.api.challenges.serializer import (
     CreateChallengeSerializer,
@@ -141,7 +141,7 @@ async def list_pending(
     course_id: Optional[str] = Query(default=None),
     sort_by: str = Query(default="date"),
     sort_dir: str = Query(default="asc"),
-    _: UserContext = Depends(get_current_admin),
+    ctx: UserContext = Depends(get_current_admin),
 ):
     """
     Lista todos los intentos pendientes de revisión manual.
@@ -153,6 +153,7 @@ async def list_pending(
         course_id=course_id,
         sort_by=sort_by,
         sort_dir=sort_dir,
+        admin_course_ids=get_admin_course_ids(ctx),
     )
 
 

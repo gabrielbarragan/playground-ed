@@ -347,6 +347,11 @@
 
       </template><!-- end users tab -->
 
+      <!-- ── Solicitudes de cambio de curso tab ──────────── -->
+      <template v-if="activeTab === 'course-requests'">
+        <CourseRequestsPanel />
+      </template>
+
       <!-- ── Evaluaciones tab ───────────────────────────── -->
       <template v-if="activeTab === 'quizzes'">
         <div class="tab-toolbar">
@@ -533,6 +538,7 @@ import { achievementsApi, type SandboxAchievement } from '@/api/achievementsApi'
 import StudentProfileDrawer from './components/StudentProfileDrawer.vue'
 import { useStudentProfileStore } from '@/stores/useStudentProfileStore'
 import AnalyticsPanel from './components/AnalyticsPanel.vue'
+import CourseRequestsPanel from './components/CourseRequestsPanel.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -558,6 +564,7 @@ const TABS = [
   { id: 'courses', label: 'Cursos' },
   { id: 'challenges', label: 'Retos' },
   { id: 'submissions', label: 'Revisiones' },
+  { id: 'course-requests', label: 'Solicitudes' },
   { id: 'quizzes', label: 'Evaluaciones' },
   { id: 'achievements', label: '🏆 Logros' },
   { id: 'analytics', label: '📊 Analítica' },

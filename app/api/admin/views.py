@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.core.auth import get_current_admin, UserContext
+from app.core.auth import get_current_admin, get_admin_course_ids, UserContext
 from app.api.admin import process
 from app.api.admin.serializer import AdminChangeEmailSerializer
 from app.api.courses.serializer import CourseInSerializer
@@ -14,11 +14,15 @@ router = APIRouter(prefix="/api/v1/admin", tags=["Admin"])
 async def list_users(
     course_id: Optional[str] = Query(default=None),
     include_inactive: bool = Query(default=False),
-    _: UserContext = Depends(get_current_admin),
+    ctx: UserContext = Depends(get_current_admin),
 ):
     """Lista todos los usuarios. Filtrable por curso e incluye inactivos opcionalmente."""
     try:
-        return process.list_users(course_id=course_id, include_inactive=include_inactive)
+        return process.list_users(
+            course_id=course_id,
+            include_inactive=include_inactive,
+            admin_course_ids=get_admin_course_ids(ctx),
+        )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
@@ -89,6 +93,6 @@ async def change_user_email(
 
 
 @router.get("/stats")
-async def global_stats(_: UserContext = Depends(get_current_admin)):
+async def global_stats(ctx: UserContext = Depends(get_current_admin)):
     """Estadísticas globales: usuarios, ejecuciones y resumen por curso."""
-    return process.get_global_stats()
+    return process.get_global_stats(admin_course_ids=get_admin_course_ids(ctx))
