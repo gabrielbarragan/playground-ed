@@ -31,6 +31,7 @@ class UserContext(BaseModel):
     course_id: str
     is_admin: bool = False
     is_superadmin: bool = False
+    assigned_course_ids: list[str] = []
 
 
 def hash_password(password: str) -> str:
@@ -72,7 +73,15 @@ def _doc_to_context(user) -> UserContext:
         course_id=str(user.course.id) if user.course else "",
         is_admin=user.is_admin,
         is_superadmin=user.is_superadmin,
+        assigned_course_ids=[str(c.id) for c in (user.assigned_courses or [])],
     )
+
+
+def get_admin_course_ids(ctx: UserContext) -> Optional[list[str]]:
+    """Retorna None para superadmin (sin filtro), lista de IDs para admin."""
+    if ctx.is_superadmin:
+        return None
+    return ctx.assigned_course_ids
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserContext:

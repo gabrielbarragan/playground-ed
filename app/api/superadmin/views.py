@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.auth import get_current_superadmin, UserContext
 from app.api.superadmin import process
-from app.api.superadmin.serializer import RoleUpdateSerializer
+from app.api.superadmin.serializer import RoleUpdateSerializer, AssignCoursesSerializer
 from app.api.courses.serializer import CourseInSerializer
 
 router = APIRouter(prefix="/api/v1/superadmin", tags=["Superadmin"])
@@ -53,3 +53,15 @@ async def toggle_course(
         return process.toggle_course(course_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.put("/users/{user_id}/courses")
+async def assign_courses(
+    user_id: str,
+    body: AssignCoursesSerializer,
+    _: UserContext = Depends(get_current_superadmin),
+):
+    try:
+        return process.assign_courses(user_id, body.course_ids)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

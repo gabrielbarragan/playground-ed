@@ -6,6 +6,7 @@ from mongoengine import (
     BooleanField,
     DateTimeField,
     IntField,
+    ListField,
     ReferenceField,
 )
 
@@ -19,6 +20,7 @@ class User(Document):
     is_active = BooleanField(default=True)
     is_admin = BooleanField(default=False)
     is_superadmin = BooleanField(default=False)
+    assigned_courses = ListField(ReferenceField("Course"), default=list)
     created_at = DateTimeField(default=datetime.utcnow)
     last_login = DateTimeField(null=True)
     # Desnormalizado para ranking en tiempo real sin aggregation costosa

@@ -14,6 +14,12 @@ _ROLE_FIELDS = {
 def _serialize_user(user) -> dict:
     course = user.course
     role = "superadmin" if user.is_superadmin else "admin" if user.is_admin else "student"
+    assigned = []
+    for c in (user.assigned_courses or []):
+        try:
+            assigned.append({"id": str(c.id), "name": c.name, "code": c.code})
+        except Exception:
+            pass
     return {
         "id": str(user.id),
         "first_name": user.first_name,
@@ -29,6 +35,7 @@ def _serialize_user(user) -> dict:
             "name": course.name,
             "code": course.code,
         } if course else None,
+        "assigned_courses": assigned,
         "created_at": user.created_at.isoformat(),
         "last_login": user.last_login.isoformat() if user.last_login else None,
     }
@@ -85,3 +92,22 @@ def toggle_course(course_id: str) -> dict:
         raise ValueError("Curso no encontrado")
     _courses.update(course, is_active=not course.is_active)
     return _serialize_course(course)
+
+
+def assign_courses(user_id: str, course_ids: list[str]) -> dict:
+    user = _users.get_by_id(user_id)
+    if not user:
+        raise ValueError("Usuario no encontrado")
+    if not user.is_admin:
+        raise ValueError("Solo se pueden asignar cursos a docentes (admin)")
+
+    courses = []
+    for cid in course_ids:
+        course = _courses.get_by_id(cid)
+        if not course:
+            raise ValueError(f"Curso no encontrado: {cid}")
+        courses.append(course)
+
+    user.assigned_courses = courses
+    user.save()
+    return _serialize_user(user)

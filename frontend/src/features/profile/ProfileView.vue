@@ -37,6 +37,63 @@
         </div>
       </section>
 
+      <!-- Cambio de curso -->
+      <section class="section">
+        <h2 class="section-title">Mi curso</h2>
+
+        <div v-if="pendingRequest" class="pending-request-box">
+          <div class="pending-request-info">
+            <span class="pending-label">Solicitud pendiente</span>
+            <span class="pending-detail">
+              De <strong>{{ auth.user?.course?.name }}</strong> a <strong>{{ pendingRequest.to_course.name }}</strong>
+            </span>
+            <span v-if="pendingRequest.reason" class="pending-reason">{{ pendingRequest.reason }}</span>
+            <span class="pending-date">{{ formatDate(pendingRequest.created_at) }}</span>
+          </div>
+          <span class="pending-badge">Pendiente de aprobación</span>
+        </div>
+
+        <div v-else-if="!showCourseForm" class="course-current">
+          <p class="section-desc">
+            Estás en el curso <strong>{{ auth.user?.course?.name }}</strong> ({{ auth.user?.course?.code }}).
+            Si necesitás cambiarte a otro curso, podés enviar una solicitud al docente.
+          </p>
+          <button class="btn-primary" @click="showCourseForm = true">Solicitar cambio de curso</button>
+        </div>
+
+        <form v-else class="email-form" @submit.prevent="handleCourseRequest" novalidate>
+          <div class="form-group">
+            <label class="form-label">Curso destino</label>
+            <select v-model="selectedCourseId" class="form-input" required>
+              <option value="" disabled>Seleccionar curso...</option>
+              <option
+                v-for="c in availableCourses"
+                :key="c.id"
+                :value="c.id"
+              >{{ c.name }} ({{ c.code }})</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Razón (opcional)</label>
+            <input
+              v-model="courseReason"
+              type="text"
+              class="form-input"
+              placeholder="Ej: Cambio de horario"
+              maxlength="500"
+            />
+          </div>
+          <p v-if="courseError" class="form-error">{{ courseError }}</p>
+          <div class="course-form-actions">
+            <button type="submit" class="btn-primary" :disabled="courseLoading || !selectedCourseId">
+              <span v-if="courseLoading" class="spinner" />
+              {{ courseLoading ? 'Enviando...' : 'Enviar solicitud' }}
+            </button>
+            <button type="button" class="btn-ghost" @click="showCourseForm = false">Cancelar</button>
+          </div>
+        </form>
+      </section>
+
       <!-- Cambio de email -->
       <section class="section">
         <h2 class="section-title">Cambiar email</h2>
@@ -81,13 +138,57 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import AppFooter from '@/components/AppFooter.vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { usersApi } from '@/api/usersApi'
+import { coursesApi } from '@/api/coursesApi'
+import { courseRequestsApi, type CourseChangeRequest } from '@/api/courseRequestsApi'
+import type { Course } from '@/types/auth.d'
 
 const auth = useAuthStore()
 
+// --- Cambio de curso ---
+const pendingRequest = ref<CourseChangeRequest | null>(null)
+const showCourseForm = ref(false)
+const availableCourses = ref<Course[]>([])
+const selectedCourseId = ref('')
+const courseReason = ref('')
+const courseLoading = ref(false)
+const courseError = ref('')
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-AR', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  })
+}
+
+async function loadCourseData() {
+  const [courses, pending] = await Promise.all([
+    coursesApi.list(),
+    courseRequestsApi.getMyPendingRequest(),
+  ])
+  availableCourses.value = courses.filter(c => c.id !== auth.user?.course?.id)
+  pendingRequest.value = pending
+}
+
+async function handleCourseRequest() {
+  courseError.value = ''
+  if (!selectedCourseId.value) return
+  courseLoading.value = true
+  try {
+    pendingRequest.value = await courseRequestsApi.createRequest(selectedCourseId.value, courseReason.value)
+    showCourseForm.value = false
+    selectedCourseId.value = ''
+    courseReason.value = ''
+  } catch (e: any) {
+    courseError.value = e?.response?.data?.detail ?? 'Error al enviar la solicitud'
+  } finally {
+    courseLoading.value = false
+  }
+}
+
+// --- Cambio de email ---
 const newEmail = ref('')
 const emailLoading = ref(false)
 const emailError = ref('')
@@ -110,6 +211,12 @@ async function handleEmailChange() {
     emailLoading.value = false
   }
 }
+
+onMounted(() => {
+  if (!auth.user?.is_admin) {
+    loadCourseData()
+  }
+})
 </script>
 
 <style scoped>
@@ -316,4 +423,69 @@ async function handleEmailChange() {
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Course change */
+.pending-request-box {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  background: #fab38710;
+  border: 1px solid #fab38730;
+  border-radius: 8px;
+}
+
+.pending-request-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pending-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fab387;
+}
+
+.pending-detail {
+  font-size: 0.85rem;
+  color: #cdd6f4;
+}
+
+.pending-detail strong { color: #cba6f7; }
+
+.pending-reason {
+  font-size: 0.78rem;
+  color: #a6adc8;
+  font-style: italic;
+}
+
+.pending-date {
+  font-size: 0.72rem;
+  color: #6c7086;
+}
+
+.pending-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  background: #fab38720;
+  color: #fab387;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.course-current {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.course-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
 </style>

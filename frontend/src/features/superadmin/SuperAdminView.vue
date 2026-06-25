@@ -56,6 +56,7 @@
               <th>Curso</th>
               <th>Estado</th>
               <th>Rol</th>
+              <th>Cursos asignados</th>
             </tr>
           </thead>
           <tbody>
@@ -84,9 +85,23 @@
                   <option value="superadmin">Superadmin</option>
                 </select>
               </td>
+              <td>
+                <template v-if="user.role === 'admin'">
+                  <div class="sa-assigned-courses" @click="openAssignModal(user)">
+                    <span
+                      v-for="ac in user.assigned_courses"
+                      :key="ac.id"
+                      class="sa-course-badge"
+                    >{{ ac.code }}</span>
+                    <span v-if="!user.assigned_courses?.length" class="sa-no-courses">Sin cursos</span>
+                    <span class="sa-edit-icon">+</span>
+                  </div>
+                </template>
+                <span v-else class="sa-na">—</span>
+              </td>
             </tr>
             <tr v-if="filteredUsers.length === 0">
-              <td colspan="5" class="sa-table__empty">Sin resultados</td>
+              <td colspan="6" class="sa-table__empty">Sin resultados</td>
             </tr>
           </tbody>
         </table>
@@ -156,6 +171,15 @@
         </div>
       </div>
     </section>
+
+    <AdminCourseAssignModal
+      v-if="assignModalUser"
+      :user-id="assignModalUser.id"
+      :user-name="`${assignModalUser.first_name} ${assignModalUser.last_name}`"
+      :current-course-ids="assignModalUser.assigned_courses?.map(c => c.id) ?? []"
+      @close="assignModalUser = null"
+      @saved="onCoursesSaved"
+    />
   </div>
 </template>
 
@@ -163,6 +187,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { superAdminApi, type SuperAdminUser, type SuperAdminCourse, type UserRole } from '@/api/superAdminApi'
+import AdminCourseAssignModal from './components/AdminCourseAssignModal.vue'
 
 const auth = useAuthStore()
 
@@ -212,6 +237,19 @@ async function onRoleChange(userId: string, role: UserRole) {
   } finally {
     roleLoading.value = null
   }
+}
+
+// --- Asignación de cursos a docentes ---
+const assignModalUser = ref<SuperAdminUser | null>(null)
+
+function openAssignModal(user: SuperAdminUser) {
+  assignModalUser.value = user
+}
+
+function onCoursesSaved(updatedUser: SuperAdminUser) {
+  const idx = users.value.findIndex(u => u.id === updatedUser.id)
+  if (idx !== -1) users.value[idx] = updatedUser
+  assignModalUser.value = null
 }
 
 // --- Cursos ---
@@ -481,6 +519,46 @@ onMounted(() => {
 .sa-course-item__code { font-size: 0.75rem; color: #cba6f7; font-family: monospace; }
 .sa-course-item__desc { font-size: 0.75rem; color: #6c7086; }
 .sa-course-item__actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+
+/* Assigned courses */
+.sa-assigned-courses {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.sa-assigned-courses:hover { background: #313244; }
+
+.sa-course-badge {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: #2a1f3d;
+  color: #cba6f7;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.sa-no-courses {
+  font-size: 0.75rem;
+  color: #585b70;
+  font-style: italic;
+}
+
+.sa-edit-icon {
+  font-size: 0.75rem;
+  color: #585b70;
+  margin-left: 0.2rem;
+}
+
+.sa-na {
+  color: #45475a;
+  font-size: 0.8rem;
+}
 
 /* Utils */
 .sa-loading { color: #a6adc8; padding: 1rem 0; text-align: center; }
