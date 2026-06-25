@@ -21,6 +21,7 @@
       <button
         v-for="tab in TABS" :key="tab.id"
         class="admin-tab" :class="{ 'admin-tab--active': activeTab === tab.id }"
+        :data-tour="`tab-${tab.id}`"
         @click="activeTab = tab.id"
       >{{ tab.label }}</button>
     </nav>
@@ -539,10 +540,13 @@ import StudentProfileDrawer from './components/StudentProfileDrawer.vue'
 import { useStudentProfileStore } from '@/stores/useStudentProfileStore'
 import AnalyticsPanel from './components/AnalyticsPanel.vue'
 import CourseRequestsPanel from './components/CourseRequestsPanel.vue'
+import { useTour } from '@/composables/useTour'
+import { adminTourSteps } from '@/tours/adminTour'
 
 const router = useRouter()
 const auth = useAuthStore()
 const studentProfile = useStudentProfileStore()
+const { shouldShowTour, startTour } = useTour()
 
 function openProfile(user: AdminUser) {
   studentProfile.open(user.id)
@@ -862,6 +866,10 @@ onMounted(async () => {
   const [statsRes] = await Promise.all([adminApi.getStats(), loadUsers(), loadChallenges(), loadCourses(), loadQuizzes(), loadAchievements()])
   stats.value = statsRes
   loadingStats.value = false
+
+  if (shouldShowTour('admin')) {
+    setTimeout(() => startTour(adminTourSteps, 'admin'), 600)
+  }
 })
 </script>
 

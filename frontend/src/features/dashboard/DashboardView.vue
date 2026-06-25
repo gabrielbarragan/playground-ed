@@ -16,6 +16,12 @@
           {{ auth.user?.first_name }} {{ auth.user?.last_name }}
         </span>
         <span class="course-chip">{{ auth.user?.course.name }}</span>
+        <button class="profile-toggle" :class="{ 'profile-toggle--active': showProfile }" @click="showProfile = !showProfile" title="Mi perfil">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        </button>
       </div>
     </header>
 
@@ -59,7 +65,7 @@
       </section>
 
       <!-- Heatmap -->
-      <section class="section">
+      <section class="section" data-tour="section-activity">
         <div class="section-header">
           <h2 class="section-title">Actividad — últimos 15 días</h2>
           <span class="heatmap-legend">
@@ -128,7 +134,7 @@
       </section>
 
       <!-- Ranking -->
-      <section v-if="ranking" class="section">
+      <section v-if="ranking" class="section" data-tour="section-ranking">
         <div class="section-header">
           <h2 class="section-title">Ranking · {{ ranking.course.name }}</h2>
           <span class="section-badge">{{ ranking.course.code }}</span>
@@ -166,20 +172,215 @@
         </div>
       </section>
     </main>
+
+    <!-- Profile sidebar -->
+    <aside v-if="showProfile" class="profile-sidebar">
+      <div class="ps-header">
+        <h2 class="ps-title">Mi Perfil</h2>
+        <button class="ps-close" @click="showProfile = false" title="Cerrar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="ps-body">
+        <!-- Info -->
+        <div class="ps-section">
+          <h3 class="ps-section-title">Información de cuenta</h3>
+          <div class="ps-info-grid">
+            <div class="ps-info-item">
+              <span class="ps-info-label">Nombre</span>
+              <span class="ps-info-value">{{ auth.user?.first_name }} {{ auth.user?.last_name }}</span>
+            </div>
+            <div class="ps-info-item">
+              <span class="ps-info-label">Email</span>
+              <span class="ps-info-value">{{ auth.user?.email }}</span>
+            </div>
+            <div class="ps-info-item">
+              <span class="ps-info-label">Curso</span>
+              <span class="ps-info-value">{{ auth.user?.course?.name ?? '—' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tour -->
+        <div class="ps-section">
+          <h3 class="ps-section-title">Tour de la plataforma</h3>
+          <p class="ps-desc">Repetí el tour interactivo para ver las funcionalidades paso a paso.</p>
+          <div class="ps-tour-actions">
+            <button class="ps-btn" @click="repeatStudentTour">Tour del Playground</button>
+            <button v-if="!auth.isAdmin" class="ps-btn" @click="repeatDashboardTour">Tour del Dashboard</button>
+            <button v-if="auth.isAdmin" class="ps-btn ps-btn--admin" @click="repeatAdminTour">Tour del Panel Admin</button>
+          </div>
+        </div>
+
+        <!-- Cambio de curso -->
+        <div v-if="!auth.isAdmin" class="ps-section">
+          <h3 class="ps-section-title">Mi curso</h3>
+
+          <div v-if="pendingRequest" class="ps-pending">
+            <span class="ps-pending-label">Solicitud pendiente</span>
+            <span class="ps-pending-detail">
+              De <strong>{{ auth.user?.course?.name }}</strong> a <strong>{{ pendingRequest.to_course.name }}</strong>
+            </span>
+            <span v-if="pendingRequest.reason" class="ps-pending-reason">{{ pendingRequest.reason }}</span>
+          </div>
+
+          <div v-else-if="!showCourseForm" class="ps-course-current">
+            <p class="ps-desc">
+              Estás en <strong>{{ auth.user?.course?.name }}</strong> ({{ auth.user?.course?.code }}).
+            </p>
+            <button class="ps-btn" @click="showCourseForm = true">Solicitar cambio de curso</button>
+          </div>
+
+          <form v-else class="ps-form" @submit.prevent="handleCourseRequest">
+            <label class="ps-form-label">
+              Curso destino
+              <select v-model="selectedCourseId" class="ps-input" required>
+                <option value="" disabled>Seleccionar...</option>
+                <option v-for="c in availableCourses" :key="c.id" :value="c.id">
+                  {{ c.name }} ({{ c.code }})
+                </option>
+              </select>
+            </label>
+            <label class="ps-form-label">
+              Razón (opcional)
+              <input v-model="courseReason" class="ps-input" placeholder="Ej: Cambio de horario" maxlength="500" />
+            </label>
+            <p v-if="courseError" class="ps-error">{{ courseError }}</p>
+            <div class="ps-form-actions">
+              <button type="submit" class="ps-btn" :disabled="courseLoading || !selectedCourseId">
+                {{ courseLoading ? 'Enviando...' : 'Enviar' }}
+              </button>
+              <button type="button" class="ps-btn ps-btn--ghost" @click="showCourseForm = false">Cancelar</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Cambio de email -->
+        <div class="ps-section">
+          <h3 class="ps-section-title">Cambiar email</h3>
+
+          <form v-if="!emailSent" class="ps-form" @submit.prevent="handleEmailChange">
+            <label class="ps-form-label">
+              Nuevo correo
+              <input v-model="newEmail" type="email" class="ps-input" placeholder="nuevo@correo.com" required />
+            </label>
+            <p v-if="emailError" class="ps-error">{{ emailError }}</p>
+            <button type="submit" class="ps-btn" :disabled="emailLoading">
+              {{ emailLoading ? 'Enviando...' : 'Solicitar cambio' }}
+            </button>
+          </form>
+
+          <div v-else class="ps-success">
+            Link de confirmación enviado a <strong>{{ newEmail }}</strong>.
+            <button class="ps-link" @click="emailSent = false">Usar otro correo</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
     <AppFooter />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import AppFooter from '@/components/AppFooter.vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { dashboardApi, type HeatmapResponse, type RankingResponse, type ActivityDay } from '@/api/dashboardApi'
 import { achievementsApi, type MyAchievementsResponse } from '@/api/achievementsApi'
+import { usersApi } from '@/api/usersApi'
+import { coursesApi } from '@/api/coursesApi'
+import { courseRequestsApi, type CourseChangeRequest } from '@/api/courseRequestsApi'
+import { useTour } from '@/composables/useTour'
+import { dashboardTourSteps } from '@/tours/dashboardTour'
+import type { Course } from '@/types/auth.d'
 
 const auth = useAuthStore()
+const router = useRouter()
+const { shouldShowTour, startTour, resetTour } = useTour()
 const loading = ref(true)
+
+// ── Profile sidebar ──────────────────────────────────────
+const showProfile = ref(false)
+
+// Tour
+function repeatStudentTour() {
+  resetTour('student')
+  router.push({ name: 'playground' })
+}
+function repeatAdminTour() {
+  resetTour('admin')
+  router.push({ name: 'admin' })
+}
+function repeatDashboardTour() {
+  resetTour('dashboard')
+  showProfile.value = false
+  setTimeout(() => startTour(dashboardTourSteps, 'dashboard'), 100)
+}
+
+// Cambio de curso
+const pendingRequest = ref<CourseChangeRequest | null>(null)
+const showCourseForm = ref(false)
+const availableCourses = ref<Course[]>([])
+const selectedCourseId = ref('')
+const courseReason = ref('')
+const courseLoading = ref(false)
+const courseError = ref('')
+
+async function loadCourseData() {
+  try {
+    const [courses, pending] = await Promise.all([
+      coursesApi.list(),
+      courseRequestsApi.getMyPendingRequest(),
+    ])
+    availableCourses.value = courses.filter(c => c.id !== auth.user?.course?.id)
+    pendingRequest.value = pending
+  } catch { /* endpoint may not be available */ }
+}
+
+async function handleCourseRequest() {
+  courseError.value = ''
+  if (!selectedCourseId.value) return
+  courseLoading.value = true
+  try {
+    pendingRequest.value = await courseRequestsApi.createRequest(selectedCourseId.value, courseReason.value)
+    showCourseForm.value = false
+    selectedCourseId.value = ''
+    courseReason.value = ''
+  } catch (e: any) {
+    courseError.value = e?.response?.data?.detail ?? 'Error al enviar la solicitud'
+  } finally {
+    courseLoading.value = false
+  }
+}
+
+// Cambio de email
+const newEmail = ref('')
+const emailLoading = ref(false)
+const emailError = ref('')
+const emailSent = ref(false)
+
+async function handleEmailChange() {
+  emailError.value = ''
+  if (!newEmail.value) return
+  if (newEmail.value === auth.user?.email) {
+    emailError.value = 'El nuevo correo es igual al actual'
+    return
+  }
+  emailLoading.value = true
+  try {
+    await usersApi.changeMyEmail(newEmail.value)
+    emailSent.value = true
+  } catch (e: any) {
+    emailError.value = e?.response?.data?.detail ?? 'Error al solicitar el cambio'
+  } finally {
+    emailLoading.value = false
+  }
+}
 const activity = ref<HeatmapResponse | null>(null)
 const ranking = ref<RankingResponse | null>(null)
 const achievements = ref<MyAchievementsResponse | null>(null)
@@ -245,6 +446,10 @@ onMounted(async () => {
     activity.value = act
     ranking.value = rank
     achievements.value = ach
+    if (!auth.isAdmin) loadCourseData()
+    if (!auth.isAdmin && shouldShowTour('dashboard')) {
+      setTimeout(() => startTour(dashboardTourSteps, 'dashboard'), 400)
+    }
   } finally {
     loading.value = false
   }
@@ -656,6 +861,242 @@ onMounted(async () => {
 
 .ach-see-all:hover { opacity: 0.8; }
 
+/* ── Profile toggle button ─────────────────────────────── */
+.profile-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #313244;
+  border: 1px solid #45475a;
+  border-radius: 8px;
+  color: #a6adc8;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.profile-toggle:hover { background: #45475a; color: #cdd6f4; }
+.profile-toggle--active { background: #2a1f3d; border-color: #cba6f7; color: #cba6f7; }
+
+/* ── Profile sidebar ──────────────────────────────────── */
+.profile-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 340px;
+  background: #181825;
+  border-left: 1px solid #313244;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.ps-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid #313244;
+  flex-shrink: 0;
+}
+
+.ps-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #cba6f7;
+  margin: 0;
+}
+
+.ps-close {
+  background: none;
+  border: none;
+  color: #6c7086;
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 4px;
+  display: flex;
+  transition: color 0.15s, background 0.15s;
+}
+.ps-close:hover { color: #cdd6f4; background: #313244; }
+
+.ps-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.ps-section {
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #313244;
+}
+.ps-section:last-child { border-bottom: none; padding-bottom: 0; }
+
+.ps-section-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #a6adc8;
+  margin: 0 0 0.75rem;
+}
+
+.ps-desc {
+  font-size: 0.78rem;
+  color: #6c7086;
+  line-height: 1.5;
+  margin: 0 0 0.75rem;
+}
+
+.ps-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ps-info-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.ps-info-label {
+  font-size: 0.72rem;
+  color: #585b70;
+  min-width: 50px;
+}
+
+.ps-info-value {
+  font-size: 0.82rem;
+  color: #cdd6f4;
+}
+
+/* Tour actions */
+.ps-tour-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Buttons */
+.ps-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  background: #cba6f7;
+  color: #1e1e2e;
+  border: none;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ps-btn:hover:not(:disabled) { background: #d4b4ff; }
+.ps-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ps-btn--admin { background: #89b4fa; }
+.ps-btn--admin:hover:not(:disabled) { background: #a0c4ff; }
+.ps-btn--ghost {
+  background: #313244;
+  color: #cdd6f4;
+}
+.ps-btn--ghost:hover { background: #45475a; }
+
+/* Course change */
+.ps-pending {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.65rem 0.85rem;
+  background: #fab38710;
+  border: 1px solid #fab38730;
+  border-radius: 8px;
+}
+.ps-pending-label { font-size: 0.72rem; font-weight: 700; color: #fab387; }
+.ps-pending-detail { font-size: 0.78rem; color: #cdd6f4; }
+.ps-pending-detail strong { color: #cba6f7; }
+.ps-pending-reason { font-size: 0.72rem; color: #a6adc8; font-style: italic; }
+
+.ps-course-current {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Form */
+.ps-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ps-form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  color: #6c7086;
+}
+
+.ps-input {
+  width: 100%;
+  padding: 0.4rem 0.65rem;
+  background: #1e1e2e;
+  border: 1px solid #313244;
+  border-radius: 6px;
+  color: #cdd6f4;
+  font-family: inherit;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.ps-input::placeholder { color: #45475a; }
+.ps-input:focus { border-color: #cba6f7; }
+
+.ps-form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ps-error {
+  font-size: 0.72rem;
+  color: #f38ba8;
+  margin: 0;
+}
+
+.ps-success {
+  font-size: 0.78rem;
+  color: #a6e3a1;
+  padding: 0.5rem 0.75rem;
+  background: #a6e3a110;
+  border: 1px solid #a6e3a130;
+  border-radius: 6px;
+}
+.ps-success strong { color: #cdd6f4; }
+
+.ps-link {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  color: #cba6f7;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+  padding: 0;
+}
+
 /* ── Animations ────────────────────────────────────────── */
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -664,5 +1105,6 @@ onMounted(async () => {
   .dash-body { padding: 1rem; }
   .rank-name { flex: 0 0 120px; }
   .section { padding: 1rem; }
+  .profile-sidebar { width: 100%; }
 }
 </style>
