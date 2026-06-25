@@ -30,6 +30,11 @@ export const studentProfileApi = {
     return data
   },
 
+  async getSnippetDetail(userId: string, snippetId: string) {
+    const { data } = await apiClient.get(`/api/v1/admin/users/${userId}/snippets/${snippetId}`)
+    return data as { id: string; title: string; code: string; language: string; tags: string[]; created_at: string; updated_at: string }
+  },
+
   async getAchievements(userId: string) {
     const { data } = await apiClient.get(`/api/v1/admin/users/${userId}/achievements`)
     return data

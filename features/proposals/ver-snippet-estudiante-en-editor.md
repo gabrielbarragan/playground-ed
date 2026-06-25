@@ -83,26 +83,26 @@ Permitir al docente hacer click en un snippet de un estudiante desde el drawer d
 
 ### Backend
 
-- [ ] **BE-1**: Crear función `get_student_snippet_detail(user_id, snippet_id)` en `student_profile.py` que retorne un snippet individual con `code` completo, validando que pertenezca al usuario
-- [ ] **BE-2**: Registrar endpoint `GET /api/v1/admin/users/{userId}/snippets/{snippetId}` en `student_views.py`
+- [x] **BE-1**: Crear función `get_student_snippet_detail(user_id, snippet_id)` en `student_profile.py` que retorne un snippet individual con `code` completo, validando que pertenezca al usuario
+- [x] **BE-2**: Registrar endpoint `GET /api/v1/admin/users/{userId}/snippets/{snippetId}` en `student_views.py`
 
 ### Frontend — API y estado
 
-- [ ] **FE-1**: Agregar `getSnippetDetail(userId, snippetId)` a `studentProfileApi.ts`
-- [ ] **FE-2**: Agregar estado `viewingStudentSnippet` a `usePlaygroundStore` con acciones `setStudentSnippetView(snippetTitle, studentName, code)` y `clearStudentSnippetView()`
+- [x] **FE-1**: Agregar `getSnippetDetail(userId, snippetId)` a `studentProfileApi.ts`
+- [x] **FE-2**: Agregar estado `viewingStudentSnippet` a `usePlaygroundStore` con acciones `setStudentSnippetView(snippetTitle, studentName, code)` y `clearStudentSnippetView()`
 
 ### Frontend — Panel de snippets
 
-- [ ] **FE-3**: Hacer clickeables los snippet cards en `StudentSnippetsPanel.vue`, emitir evento `view-snippet` con `snippetId`
-- [ ] **FE-4**: Propagar evento `view-snippet` en `StudentProfileDrawer.vue` hacia `AdminView.vue`
-- [ ] **FE-5**: En `AdminView.vue`, manejar el evento navegando al Playground con query params `viewSnippet` y `studentId`
+- [x] **FE-3**: Hacer clickeables los snippet cards en `StudentSnippetsPanel.vue`, emitir evento `view-snippet` con `snippetId`
+- [x] **FE-4**: Propagar evento `view-snippet` en `StudentProfileDrawer.vue` hacia `AdminView.vue`
+- [x] **FE-5**: En `AdminView.vue`, manejar el evento navegando al Playground con query params `viewSnippet` y `studentId`
 
 ### Frontend — Editor
 
-- [ ] **FE-6**: En `PlaygroundView.vue`, leer query params al montar, llamar al endpoint para obtener el snippet completo, y activar `viewingStudentSnippet`
-- [ ] **FE-7**: Mostrar barra indicadora encima del editor con título del snippet, nombre del estudiante, y botón "Cerrar vista"
-- [ ] **FE-8**: Cuando `viewingStudentSnippet` está activo, poner el editor en solo lectura y ocultar botones de guardar/actualizar/enviar reto
-- [ ] **FE-9**: Al cerrar la vista, restaurar el código previo del docente y limpiar query params
+- [x] **FE-6**: En `PlaygroundView.vue`, leer query params al montar, llamar al endpoint para obtener el snippet completo, y activar `viewingStudentSnippet`
+- [x] **FE-7**: Mostrar barra indicadora encima del editor con título del snippet, nombre del estudiante, y botón "Cerrar vista"
+- [x] **FE-8**: Cuando `viewingStudentSnippet` está activo, poner el editor en solo lectura y ocultar botones de guardar/actualizar/enviar reto
+- [x] **FE-9**: Al cerrar la vista, restaurar el código previo del docente y limpiar query params
 
 ### Validación
 

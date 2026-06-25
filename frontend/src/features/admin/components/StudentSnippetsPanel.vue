@@ -7,7 +7,12 @@
     </div>
 
     <div v-else class="snippets-grid">
-      <div v-for="s in snippets.snippets" :key="s.id" class="snippet-card">
+      <div
+        v-for="s in snippets.snippets"
+        :key="s.id"
+        class="snippet-card snippet-card--clickable"
+        @click="emit('view-snippet', s.id)"
+      >
         <div class="sc-header">
           <span class="sc-title">{{ s.title }}</span>
           <span class="sc-lang">{{ s.language }}</span>
@@ -26,6 +31,8 @@
 import { onMounted } from 'vue'
 import { useStudentProfileStore } from '@/stores/useStudentProfileStore'
 import { storeToRefs } from 'pinia'
+
+const emit = defineEmits<{ 'view-snippet': [snippetId: string] }>()
 
 const store = useStudentProfileStore()
 const { snippets, loadingSnippets } = storeToRefs(store)
@@ -54,6 +61,12 @@ function fmtDate(iso: string) {
   background: #181825; border: 1px solid #313244; border-radius: 8px;
   padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;
   overflow: hidden;
+}
+.snippet-card--clickable {
+  cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.snippet-card--clickable:hover {
+  border-color: #cba6f7; background: #1e1e2e;
 }
 
 .sc-header {

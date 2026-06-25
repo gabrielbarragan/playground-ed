@@ -66,7 +66,17 @@
 
       <!-- Editor pane -->
       <section class="pane" :style="editorPaneStyle">
-        <MonacoEditor v-model="store.code" @run="handleRun" />
+        <!-- Student snippet view banner -->
+        <div v-if="store.viewingStudentSnippet" class="snippet-view-banner">
+          <div class="snippet-view-info">
+            <span class="snippet-view-label">Viendo snippet:</span>
+            <span class="snippet-view-title">{{ store.viewingStudentSnippet.snippetTitle }}</span>
+            <span class="snippet-view-sep">—</span>
+            <span class="snippet-view-student">{{ store.viewingStudentSnippet.studentName }}</span>
+          </div>
+          <button class="snippet-view-close" @click="closeStudentSnippetView">Cerrar vista</button>
+        </div>
+        <MonacoEditor v-model="store.code" :read-only="!!store.viewingStudentSnippet" @run="handleRun" />
         <div class="editor-toolbar">
           <button
             class="btn-run"
@@ -105,7 +115,7 @@
             El servidor no está disponible
           </span>
 
-          <template v-if="auth.isAuthenticated">
+          <template v-if="auth.isAuthenticated && !store.viewingStudentSnippet">
             <div class="toolbar-divider" />
             <button
               v-if="snippets.activeSnippet"
@@ -251,12 +261,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { usePlaygroundStore } from '@/stores/usePlaygroundStore'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useSnippetsStore } from '@/stores/useSnippetsStore'
 import { badgesApi, type Badge } from '@/api/badgesApi'
 import { useChallengesStore } from '@/stores/useChallengesStore'
+import { studentProfileApi } from '@/api/studentProfileApi'
 import MonacoEditor from './components/MonacoEditor.vue'
 import TerminalOutput from './components/TerminalOutput.vue'
 import CanvasRenderer from './components/CanvasRenderer.vue'
@@ -271,6 +282,7 @@ const auth = useAuthStore()
 const snippets = useSnippetsStore()
 const challengeStore = useChallengesStore()
 const router = useRouter()
+const route = useRoute()
 
 const showSaveModal = ref(false)
 const showSnippetsPanel = ref(false)
@@ -351,6 +363,10 @@ function onDocumentClick(e: MouseEvent) {
 function handleLogout() {
   auth.logout()
   router.push('/login')
+}
+
+function closeStudentSnippetView() {
+  store.clearStudentSnippetView()
 }
 
 async function openSnippetsPanel() {
@@ -467,6 +483,20 @@ onMounted(async () => {
     store.fetchVersion(),
     badgesApi.list().then(data => { BADGES.value = data }),
   ])
+
+  const snippetId = route.query.viewSnippet as string | undefined
+  const studentId = route.query.studentId as string | undefined
+  if (snippetId && studentId) {
+    try {
+      const [snippetData, summaryData] = await Promise.all([
+        studentProfileApi.getSnippetDetail(studentId, snippetId),
+        studentProfileApi.getSummary(studentId),
+      ])
+      const studentName = `${summaryData.user.first_name} ${summaryData.user.last_name}`
+      store.setStudentSnippetView(snippetData.title, studentName, snippetData.code)
+    } catch { /* snippet or student not found */ }
+    router.replace({ query: {} })
+  }
 })
 
 onBeforeUnmount(() => {
@@ -476,6 +506,43 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* ── Student snippet view banner ──────────────────────────── */
+.snippet-view-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 1rem;
+  background: #2a2040;
+  border-bottom: 1px solid #cba6f750;
+  flex-shrink: 0;
+}
+.snippet-view-info {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  min-width: 0;
+  overflow: hidden;
+}
+.snippet-view-label { color: #6c7086; flex-shrink: 0; }
+.snippet-view-title { color: #cba6f7; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.snippet-view-sep { color: #45475a; flex-shrink: 0; }
+.snippet-view-student { color: #a6adc8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.snippet-view-close {
+  background: transparent;
+  border: 1px solid #cba6f750;
+  color: #cba6f7;
+  border-radius: 6px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.72rem;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.snippet-view-close:hover { background: #cba6f720; border-color: #cba6f7; }
+
 /* ── Layout ──────────────────────────────────────────────── */
 .playground-layout {
   display: flex;

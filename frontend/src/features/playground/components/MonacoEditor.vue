@@ -17,7 +17,7 @@
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import * as monaco from 'monaco-editor'
 
-const props = defineProps<{ modelValue: string }>()
+const props = defineProps<{ modelValue: string; readOnly?: boolean }>()
 const emit = defineEmits<{
   'update:modelValue': [value: string]
   run: []
@@ -81,6 +81,13 @@ function blockMiddle(e: MouseEvent) {
   if (e.button === 1) { e.preventDefault(); e.stopPropagation() }
 }
 
+function blockPasteInput(e: InputEvent) {
+  if (e.inputType === 'insertFromPaste' || e.inputType === 'insertFromDrop') {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+}
+
 onMounted(() => {
   if (!containerRef.value) return
 
@@ -92,6 +99,9 @@ onMounted(() => {
   containerRef.value.addEventListener('copy', blockEvent, true)
   containerRef.value.addEventListener('cut', blockEvent, true)
   containerRef.value.addEventListener('paste', blockEvent, true)
+  containerRef.value.addEventListener('drop', blockEvent, true)
+  containerRef.value.addEventListener('dragover', blockEvent, true)
+  containerRef.value.addEventListener('beforeinput', blockPasteInput as EventListener, true)
   containerRef.value.addEventListener('mousedown',  blockMiddle, true)
   containerRef.value.addEventListener('mouseup',    blockMiddle, true)
   containerRef.value.addEventListener('auxclick',   blockMiddle, true)
@@ -121,6 +131,7 @@ onMounted(() => {
       indentation: true,
     },
     suggest: { preview: true },
+    readOnly: props.readOnly ?? false,
     contextmenu: false,
     middleClickPaste: false,
     overviewRulerLanes: 0,
@@ -145,6 +156,7 @@ onMounted(() => {
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX, () => {})
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {})
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyV, () => {})
+  editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.Insert, () => {})
 })
 
 watch(
@@ -156,12 +168,22 @@ watch(
   },
 )
 
+watch(
+  () => props.readOnly,
+  (val) => {
+    editor?.updateOptions({ readOnly: val ?? false })
+  },
+)
+
 onBeforeUnmount(() => {
   if (containerRef.value) {
     containerRef.value.removeEventListener('contextmenu', blockEvent, true)
     containerRef.value.removeEventListener('copy', blockEvent, true)
     containerRef.value.removeEventListener('cut', blockEvent, true)
     containerRef.value.removeEventListener('paste', blockEvent, true)
+    containerRef.value.removeEventListener('drop', blockEvent, true)
+    containerRef.value.removeEventListener('dragover', blockEvent, true)
+    containerRef.value.removeEventListener('beforeinput', blockPasteInput as EventListener, true)
     containerRef.value.removeEventListener('mousedown',  blockMiddle, true)
     containerRef.value.removeEventListener('mouseup',    blockMiddle, true)
     containerRef.value.removeEventListener('auxclick',   blockMiddle, true)
