@@ -30,14 +30,20 @@ def _serialize_user(user) -> dict:
     }
 
 
-def list_users(course_id: Optional[str] = None, include_inactive: bool = False) -> dict:
+def list_users(
+    course_id: Optional[str] = None,
+    include_inactive: bool = False,
+    admin_course_ids: Optional[list[str]] = None,
+) -> dict:
     if course_id:
+        if admin_course_ids is not None and course_id not in admin_course_ids:
+            return {"total": 0, "users": []}
         course = _courses.get_active_by_id(course_id)
         if not course:
             raise ValueError("Curso no encontrado")
         users = _users.get_by_course(course, include_inactive=include_inactive)
     else:
-        users = _users.get_all(include_inactive=include_inactive)
+        users = _users.get_all(include_inactive=include_inactive, course_ids=admin_course_ids)
 
     result = [_serialize_user(u) for u in users if not u.is_admin]
     return {"total": len(result), "users": result}
@@ -122,15 +128,22 @@ async def admin_change_email_process(user_id: str, new_email: str) -> dict:
     return _serialize_user(user)
 
 
-def get_global_stats() -> dict:
+def get_global_stats(admin_course_ids: Optional[list[str]] = None) -> dict:
     today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     last_7_days_start = today - timedelta(days=6)
 
-    active_users = _users.count_active()
-    inactive_users = _users.count_inactive()
+    active_users = _users.count_active(course_ids=admin_course_ids)
+    inactive_users = _users.count_inactive(course_ids=admin_course_ids)
     courses = list(_courses.get_active())
+    if admin_course_ids is not None:
+        courses = [c for c in courses if str(c.id) in admin_course_ids]
 
     activity_last_7 = _activity.get_all_users_in_range(last_7_days_start, today)
+    if admin_course_ids is not None:
+        activity_last_7 = [
+            a for a in activity_last_7
+            if str(a.user.course.id) in admin_course_ids
+        ]
     total_executions_7d = sum(a.executions for a in activity_last_7)
     active_user_ids = {str(a.user.id) for a in activity_last_7}
 

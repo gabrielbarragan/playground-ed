@@ -268,6 +268,7 @@ def list_pending_reviews(
     course_id: Optional[str] = None,
     sort_by: str = "date",
     sort_dir: str = "asc",
+    admin_course_ids: Optional[list[str]] = None,
 ) -> dict:
     attempts = list(_attempts.get_pending_review())
     if challenge_id:
@@ -276,6 +277,11 @@ def list_pending_reviews(
         attempts = [
             a for a in attempts
             if any(str(c.id) == course_id for c in (a.challenge.courses or []))
+        ]
+    if admin_course_ids is not None:
+        attempts = [
+            a for a in attempts
+            if str(a.user.course.id) in admin_course_ids
         ]
     items = [_serialize_attempt(a) for a in attempts]
 

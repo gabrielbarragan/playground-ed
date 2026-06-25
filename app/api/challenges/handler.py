@@ -56,12 +56,14 @@ class ChallengeHandler:
         course_id: Optional[str] = None,
         sort_by: str = "date",
         sort_dir: str = "asc",
+        admin_course_ids: Optional[list[str]] = None,
     ) -> dict:
         return process.list_pending_reviews(
             challenge_id=challenge_id,
             course_id=course_id,
             sort_by=sort_by,
             sort_dir=sort_dir,
+            admin_course_ids=admin_course_ids,
         )
 
     @staticmethod

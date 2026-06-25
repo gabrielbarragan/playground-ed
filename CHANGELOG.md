@@ -1,5 +1,42 @@
 # Changelog
 
+## Asignación de cursos a docentes y solicitud de cambio de curso
+
+- **Fecha**: 2026-06-24
+- **Rama**: `feature/snippets-students-in-editor`
+
+### Cambios
+
+#### Asignación de cursos a docentes (Superadmin)
+
+- feat(model): agregar campo `assigned_courses` (ListField de ReferenceField a Course) en modelo `User`
+- feat(api): agregar helper `get_admin_course_ids()` en `auth.py` y campo `assigned_course_ids` en `UserContext`
+- feat(api): agregar endpoint `PUT /api/v1/superadmin/users/{userId}/courses` para asignar cursos a docentes
+- feat(api): extender serialización de usuario en superadmin para incluir `assigned_courses`
+- feat(api): filtrar `list_users()` en `admin/process.py` por cursos asignados del docente
+- feat(api): filtrar `get_global_stats()` en `admin/process.py` por cursos asignados del docente
+- feat(api): agregar validación `_check_student_access()` en todos los endpoints de `student_views.py` (HTTP 403 si el docente no tiene acceso al curso del estudiante)
+- feat(api): filtrar envíos pendientes de revisión por cursos del docente en `challenges/process.py`
+- feat(frontend): extender tipo `SuperAdminUser` con campo `assigned_courses` en `superAdminApi.ts`
+- feat(frontend): agregar método `assignCourses()` en `superAdminApi.ts`
+- feat(frontend): agregar columna "Cursos asignados" con badges en tabla de usuarios de `SuperAdminView.vue`
+- feat(frontend): crear modal `AdminCourseAssignModal.vue` con checkboxes de cursos activos
+
+#### Solicitud de cambio de curso (Estudiante → Docente)
+
+- feat(model): crear modelo `CourseChangeRequest` con campos user, from_course, to_course, reason, status, resolved_by, rejection_reason
+- feat(api): crear módulo `app/api/course_requests/` con querysets, process, serializer y views
+- feat(api): agregar endpoint `POST /api/v1/users/me/course-change-request` para crear solicitud
+- feat(api): agregar endpoint `GET /api/v1/users/me/course-change-request` para consultar solicitud pendiente
+- feat(api): agregar endpoint `GET /api/v1/admin/course-change-requests` para listar solicitudes filtradas por cursos del docente
+- feat(api): agregar endpoint `PUT /api/v1/admin/course-change-requests/{requestId}/resolve` para aprobar o rechazar
+- feat(frontend): crear API client `courseRequestsApi.ts` con createRequest, getMyPendingRequest, listPendingRequests, resolveRequest
+- feat(frontend): agregar sección "Mi curso" en `ProfileView.vue` con formulario de solicitud y estado pendiente
+- feat(frontend): crear `CourseRequestsPanel.vue` con lista de solicitudes, botones aprobar/rechazar y campo de razón de rechazo
+- feat(frontend): agregar tab "Solicitudes" en `AdminView.vue`
+
+---
+
 ## Ver snippet de estudiante en el editor
 
 - **Fecha**: 2026-06-24
