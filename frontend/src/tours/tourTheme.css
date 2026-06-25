@@ -1,0 +1,78 @@
+.driver-popover {
+  background: #181825 !important;
+  border: 1px solid #313244 !important;
+  color: #cdd6f4 !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  max-width: 340px !important;
+}
+
+.driver-popover .driver-popover-title {
+  color: #cba6f7 !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+}
+
+.driver-popover .driver-popover-description {
+  color: #a6adc8 !important;
+  font-size: 0.82rem !important;
+  line-height: 1.5 !important;
+}
+
+.driver-popover .driver-popover-progress-text {
+  color: #6c7086 !important;
+  font-size: 0.72rem !important;
+}
+
+.driver-popover .driver-popover-next-btn {
+  background: #cba6f7 !important;
+  color: #1e1e2e !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+  font-size: 0.78rem !important;
+  padding: 0.35rem 0.85rem !important;
+  text-shadow: none !important;
+}
+
+.driver-popover .driver-popover-next-btn:hover {
+  background: #d4b4ff !important;
+}
+
+.driver-popover .driver-popover-prev-btn {
+  background: #313244 !important;
+  color: #cdd6f4 !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+  font-size: 0.78rem !important;
+  padding: 0.35rem 0.85rem !important;
+  text-shadow: none !important;
+}
+
+.driver-popover .driver-popover-prev-btn:hover {
+  background: #45475a !important;
+}
+
+.driver-popover .driver-popover-close-btn {
+  color: #6c7086 !important;
+}
+
+.driver-popover .driver-popover-close-btn:hover {
+  color: #cdd6f4 !important;
+}
+
+.driver-popover .driver-popover-arrow-side-left.driver-popover-arrow,
+.driver-popover .driver-popover-arrow-side-right.driver-popover-arrow,
+.driver-popover .driver-popover-arrow-side-top.driver-popover-arrow,
+.driver-popover .driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-color: #313244 !important;
+}
+
+.driver-popover .driver-popover-footer button:focus {
+  outline: 2px solid #cba6f780 !important;
+  outline-offset: 2px !important;
+}
