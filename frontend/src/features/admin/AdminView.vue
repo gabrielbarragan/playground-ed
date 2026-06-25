@@ -510,12 +510,13 @@
     <AppFooter />
 
     <!-- Drawer de perfil de estudiante -->
-    <StudentProfileDrawer @go-to-submissions="goToSubmissions" />
+    <StudentProfileDrawer @go-to-submissions="goToSubmissions" @view-snippet="viewStudentSnippet" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AppFooter from '@/components/AppFooter.vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { adminApi, type GlobalStats, type AdminUser, type AdminCourse } from '@/api/adminApi'
@@ -533,6 +534,7 @@ import StudentProfileDrawer from './components/StudentProfileDrawer.vue'
 import { useStudentProfileStore } from '@/stores/useStudentProfileStore'
 import AnalyticsPanel from './components/AnalyticsPanel.vue'
 
+const router = useRouter()
 const auth = useAuthStore()
 const studentProfile = useStudentProfileStore()
 
@@ -543,6 +545,12 @@ function openProfile(user: AdminUser) {
 function goToSubmissions() {
   studentProfile.close()
   activeTab.value = 'submissions'
+}
+
+function viewStudentSnippet(snippetId: string) {
+  const userId = studentProfile.userId
+  studentProfile.close()
+  router.push({ name: 'playground', query: { viewSnippet: snippetId, studentId: userId ?? undefined } })
 }
 
 const TABS = [

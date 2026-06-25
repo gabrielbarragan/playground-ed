@@ -11,6 +11,28 @@ export const usePlaygroundStore = defineStore('playground', () => {
   const serverHealth  = ref<boolean>(false)
   const serverVersion = ref<string | null>(null)
 
+  // ── Student snippet view (admin) ────────────────────────
+  const viewingStudentSnippet = ref<{
+    snippetTitle: string
+    studentName: string
+    code: string
+  } | null>(null)
+  const savedCodeBeforeView = ref<string | null>(null)
+
+  function setStudentSnippetView(snippetTitle: string, studentName: string, snippetCode: string) {
+    savedCodeBeforeView.value = code.value
+    viewingStudentSnippet.value = { snippetTitle, studentName, code: snippetCode }
+    code.value = snippetCode
+  }
+
+  function clearStudentSnippetView() {
+    if (savedCodeBeforeView.value !== null) {
+      code.value = savedCodeBeforeView.value
+    }
+    viewingStudentSnippet.value = null
+    savedCodeBeforeView.value = null
+  }
+
   // WebSocket actual. shallowRef para no hacer reactive el objeto WS completo.
   const ws = shallowRef<WebSocket | null>(null)
 
@@ -138,6 +160,9 @@ export const usePlaygroundStore = defineStore('playground', () => {
     status,
     serverHealth,
     serverVersion,
+    viewingStudentSnippet,
+    setStudentSnippetView,
+    clearStudentSnippetView,
     ws,
     onWsMessage,
     onGfxMessage,

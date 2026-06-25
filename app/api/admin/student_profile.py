@@ -274,6 +274,25 @@ def get_student_snippets(user_id: str, limit: int = 20) -> dict:
     }
 
 
+def get_student_snippet_detail(user_id: str, snippet_id: str) -> dict:
+    user = _get_user(user_id)
+    try:
+        snippet = CodeSnippet.objects(id=snippet_id, user=user).first()
+    except Exception:
+        snippet = None
+    if not snippet:
+        raise ValueError("Snippet no encontrado")
+    return {
+        "id": str(snippet.id),
+        "title": snippet.title,
+        "code": snippet.code,
+        "language": snippet.language,
+        "tags": snippet.tags,
+        "created_at": snippet.created_at.isoformat(),
+        "updated_at": snippet.updated_at.isoformat(),
+    }
+
+
 def get_student_achievements(user_id: str) -> dict:
     user = _get_user(user_id)
     user_achievements = list(
