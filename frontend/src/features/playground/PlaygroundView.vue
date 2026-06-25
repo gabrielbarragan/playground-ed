@@ -44,11 +44,11 @@
               >{{ badge.emoji }}</button>
             </div>
           </div>
-          <span class="user-name">{{ auth.user.first_name }} {{ auth.user.last_name }}</span>
-          <RouterLink to="/dashboard" class="btn-header-link">Dashboard</RouterLink>
+          <RouterLink to="/dashboard" class="user-name-link">{{ auth.user.first_name }} {{ auth.user.last_name }}</RouterLink>
+          <RouterLink to="/dashboard" class="btn-header-link" data-tour="link-dashboard">Dashboard</RouterLink>
           <RouterLink v-if="auth.isAdmin" to="/admin" class="btn-header-link">Docente</RouterLink>
           <RouterLink v-if="auth.isSuperAdmin" to="/superadmin" class="btn-header-link">Superadmin</RouterLink>
-          <RouterLink to="/quizzes" class="btn-header-link">Evaluaciones</RouterLink>
+          <RouterLink to="/quizzes" class="btn-header-link" data-tour="link-quizzes">Evaluaciones</RouterLink>
           <button class="btn-logout" @click="handleLogout">Salir</button>
         </div>
       </div>
@@ -276,6 +276,8 @@ import SnippetsPanel from './components/SnippetsPanel.vue'
 import ChallengesPanel from './components/ChallengesPanel.vue'
 import ChallengeDescription from './components/ChallengeDescription.vue'
 import AchievementsPanel from './components/AchievementsPanel.vue'
+import { useTour } from '@/composables/useTour'
+import { studentTourSteps } from '@/tours/studentTour'
 
 const store = usePlaygroundStore()
 const auth = useAuthStore()
@@ -283,6 +285,7 @@ const snippets = useSnippetsStore()
 const challengeStore = useChallengesStore()
 const router = useRouter()
 const route = useRoute()
+const { shouldShowTour, startTour } = useTour()
 
 const showSaveModal = ref(false)
 const showSnippetsPanel = ref(false)
@@ -496,6 +499,10 @@ onMounted(async () => {
       store.setStudentSnippetView(snippetData.title, studentName, snippetData.code)
     } catch { /* snippet or student not found */ }
     router.replace({ query: {} })
+  }
+
+  if (!auth.isAdmin && shouldShowTour('student')) {
+    setTimeout(() => startTour(studentTourSteps, 'student'), 600)
   }
 })
 
@@ -885,11 +892,14 @@ onBeforeUnmount(() => {
   border-left: 1px solid #313244;
 }
 
-.user-name {
+.user-name-link {
   font-size: 0.78rem;
   color: #a6adc8;
   white-space: nowrap;
+  text-decoration: none;
+  transition: color 0.15s;
 }
+.user-name-link:hover { color: #cdd6f4; }
 
 .btn-header-link {
   font-size: 0.75rem;

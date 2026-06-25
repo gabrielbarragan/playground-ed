@@ -37,6 +37,18 @@
         </div>
       </section>
 
+      <!-- Tour de la plataforma -->
+      <section class="section">
+        <h2 class="section-title">Tour de la plataforma</h2>
+        <p class="section-desc">
+          Repetí el tour interactivo para volver a ver las funcionalidades de la plataforma paso a paso.
+        </p>
+        <div class="tour-actions">
+          <button class="btn-primary" @click="repeatStudentTour">Repetir tour del Playground</button>
+          <button v-if="auth.isAdmin" class="btn-primary btn-primary--admin" @click="repeatAdminTour">Repetir tour del Panel Admin</button>
+        </div>
+      </section>
+
       <!-- Cambio de curso -->
       <section class="section">
         <h2 class="section-title">Mi curso</h2>
@@ -139,14 +151,28 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AppFooter from '@/components/AppFooter.vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { usersApi } from '@/api/usersApi'
 import { coursesApi } from '@/api/coursesApi'
 import { courseRequestsApi, type CourseChangeRequest } from '@/api/courseRequestsApi'
+import { useTour } from '@/composables/useTour'
 import type { Course } from '@/types/auth.d'
 
 const auth = useAuthStore()
+const router = useRouter()
+const { resetTour } = useTour()
+
+function repeatStudentTour() {
+  resetTour('student')
+  router.push({ name: 'playground' })
+}
+
+function repeatAdminTour() {
+  resetTour('admin')
+  router.push({ name: 'admin' })
+}
 
 // --- Cambio de curso ---
 const pendingRequest = ref<CourseChangeRequest | null>(null)
@@ -164,12 +190,14 @@ function formatDate(iso: string): string {
 }
 
 async function loadCourseData() {
-  const [courses, pending] = await Promise.all([
-    coursesApi.list(),
-    courseRequestsApi.getMyPendingRequest(),
-  ])
-  availableCourses.value = courses.filter(c => c.id !== auth.user?.course?.id)
-  pendingRequest.value = pending
+  try {
+    const [courses, pending] = await Promise.all([
+      coursesApi.list(),
+      courseRequestsApi.getMyPendingRequest(),
+    ])
+    availableCourses.value = courses.filter(c => c.id !== auth.user?.course?.id)
+    pendingRequest.value = pending
+  } catch { /* endpoint may not be available yet */ }
 }
 
 async function handleCourseRequest() {
@@ -488,4 +516,16 @@ onMounted(() => {
   align-items: center;
   gap: 0.75rem;
 }
+
+/* Tour */
+.tour-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.btn-primary--admin {
+  background: #89b4fa;
+}
+.btn-primary--admin:hover:not(:disabled) { background: #a0c4ff; }
 </style>

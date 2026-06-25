@@ -1,5 +1,44 @@
 # Changelog
 
+## Tour interactivo de onboarding
+
+- **Fecha**: 2026-06-25
+- **Rama**: `feature/management-courses-change-course`
+
+### Cambios
+
+#### Setup
+
+- feat(frontend): instalar `driver.js` v1.x como dependencia
+- feat(frontend): crear `frontend/src/tours/tourTheme.css` con estilos custom Catppuccin Mocha para los popovers de driver.js
+- feat(frontend): importar `tourTheme.css` globalmente en `main.ts`
+- feat(frontend): crear composable `frontend/src/composables/useTour.ts` con `shouldShowTour()`, `startTour()` y `resetTour()` usando `localStorage` por clave de rol
+
+#### Tour del Playground (Estudiante)
+
+- feat(frontend): crear `frontend/src/tours/studentTour.ts` con 10 pasos (header, editor, ejecutar, terminal, snippets, retos, enviar, dashboard, evaluaciones, badge)
+- feat(frontend): integrar tour en `PlaygroundView.vue` — se activa en `onMounted` con delay de 500ms si es el primer login del estudiante
+- feat(frontend): agregar atributos `data-tour` a los links de Dashboard y Evaluaciones en el header del Playground
+
+#### Tour del Dashboard (Estudiante)
+
+- feat(frontend): crear `frontend/src/tours/dashboardTour.ts` con 5 pasos (header, estadísticas, actividad, ranking, perfil)
+- feat(frontend): agregar atributos `data-tour="section-activity"` y `data-tour="section-ranking"` en `DashboardView.vue`
+- feat(frontend): integrar tour en `DashboardView.vue` — se activa tras cargar datos si es el primer ingreso al Dashboard y el usuario no es admin
+
+#### Tour del Panel Admin (Docente)
+
+- feat(frontend): crear `frontend/src/tours/adminTour.ts` con 12 pasos (header, usuarios, stats, filtro cursos, perfil estudiante, cursos, retos, revisiones, solicitudes, evaluaciones, logros, analítica)
+- feat(frontend): integrar tour en `AdminView.vue` — se activa en `onMounted` con delay de 600ms si es el primer ingreso del docente al panel admin
+- feat(frontend): agregar atributos `data-tour` a tabs del panel admin
+
+#### Repetir tour
+
+- feat(frontend): agregar sección "Tour de la plataforma" en el sidebar de perfil del Dashboard con botones "Tour del Playground", "Tour del Dashboard" (solo estudiantes) y "Tour del Panel Admin" (solo admins)
+- feat(frontend): el botón "Tour del Dashboard" relanza el tour en la vista actual sin navegar; los demás resetean la key y navegan a la ruta correspondiente
+
+---
+
 ## Asignación de cursos a docentes y solicitud de cambio de curso
 
 - **Fecha**: 2026-06-24
