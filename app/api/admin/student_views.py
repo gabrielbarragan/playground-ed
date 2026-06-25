@@ -63,6 +63,18 @@ async def get_student_snippets(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
+@router.get("/{user_id}/snippets/{snippet_id}")
+async def get_student_snippet_detail(
+    user_id: str,
+    snippet_id: str,
+    _: UserContext = Depends(get_current_admin),
+):
+    try:
+        return sp.get_student_snippet_detail(user_id, snippet_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
 @router.get("/{user_id}/achievements")
 async def get_student_achievements(
     user_id: str,

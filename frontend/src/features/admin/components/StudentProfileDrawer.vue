@@ -38,7 +38,7 @@
               <StudentActivityPanel v-if="activeTab === 'activity'" :summary="summary" />
               <StudentChallengesPanel v-if="activeTab === 'challenges'" />
               <StudentQuizzesPanel v-if="activeTab === 'quizzes'" />
-              <StudentSnippetsPanel v-if="activeTab === 'snippets'" />
+              <StudentSnippetsPanel v-if="activeTab === 'snippets'" @view-snippet="(id: string) => $emit('view-snippet', id)" />
               <StudentAchievementsPanel v-if="activeTab === 'achievements'" />
             </div>
           </div>
@@ -59,7 +59,7 @@ import StudentQuizzesPanel from './StudentQuizzesPanel.vue'
 import StudentSnippetsPanel from './StudentSnippetsPanel.vue'
 import StudentAchievementsPanel from './StudentAchievementsPanel.vue'
 
-defineEmits(['go-to-submissions'])
+defineEmits(['go-to-submissions', 'view-snippet'])
 
 const store = useStudentProfileStore()
 const { userId, summary, loadingSummary } = storeToRefs(store)
